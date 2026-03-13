@@ -1,9 +1,0 @@
-.section--alt {
-  background: var(--color-bg-alt);
-}
-
-.experience__list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
