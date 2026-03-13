@@ -1,0 +1,29 @@
+.contact__cta {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--color-text);
+  margin: 0 0 var(--space-xl);
+  max-width: 400px;
+}
+
+.contact__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xl);
+  margin-bottom: var(--space-3xl);
+}
+
+.contact__link {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.contact__footer {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.contact__heart {
+  color: var(--color-accent);
+}
