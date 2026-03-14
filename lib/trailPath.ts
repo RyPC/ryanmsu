@@ -3,8 +3,7 @@ import type { Checkpoint } from "@/data/experiences";
 /**
  * X position (0-800) of the trail path at scroll progress t (0-1).
  * Path: M 400 0 C 400 0 520 400 380 800 C 280 1200 400 1600 280 2000 C 400 2400 520 2800 400 3200 C 280 3600 400 4000 400 4000
- * Four segments: seg1 curves right then left, seg2 left, seg3 right, seg4 dips left and back.
- * Keyframes derived from path structure (bezier control points and approximate arc-length distribution).
+ * Keyframes derived from bezier control points and approximate arc-length distribution.
  */
 const TRAIL_X_KEYFRAMES: [number, number][] = [
   [0, 400],
@@ -33,11 +32,6 @@ export function getTrailXAtProgress(progress: number): number {
     }
   }
   return TRAIL_X_KEYFRAMES[TRAIL_X_KEYFRAMES.length - 1][1]
-}
-
-/** Trail SVG is 800 units wide; returns fraction 0-1 for positioning */
-export function getTrailXFraction(progress: number): number {
-  return getTrailXAtProgress(progress) / 800
 }
 
 export const TRAIL_CONTENT_HEIGHT = 4000
@@ -79,8 +73,8 @@ export function getTrailMetricsFromExperiences(
 }
 
 /**
- * Converts locationOnTrail (0-1, position in trail doc) to scroll progress (0-1).
- * When checkpoint at locationOnTrail is at top of viewport, scrollTop = heroHeight + locationOnTrail * TRAIL_CONTENT_HEIGHT.
+ * Converts locationOnTrail (0-1) to scroll progress (0-1).
+ * scrollTop at locationOnTrail = heroHeight + locationOnTrail * TRAIL_CONTENT_HEIGHT
  */
 export function locationToScrollProgress(
   locationOnTrail: number,
@@ -91,4 +85,3 @@ export function locationToScrollProgress(
   const scrollTop = heroHeight + locationOnTrail * TRAIL_CONTENT_HEIGHT
   return Math.min(1, scrollTop / totalHeight)
 }
-

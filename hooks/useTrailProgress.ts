@@ -5,13 +5,11 @@ import { useEffect, useState } from 'react'
 interface UseTrailProgressOptions {
   heroHeight?: number
   trailHeight?: number
-  /** When true, the scroll container is mounted. Re-attach listener when this flips to true (e.g. after returning from side trail). */
   containerReady?: boolean
 }
 
 export interface TrailProgress {
   progress: number
-  /** 0 when at top of hero, 1 when scrolled past hero. For fading trail in. */
   heroReveal: number
 }
 
@@ -29,7 +27,8 @@ export function useTrailProgress(
 
     const handleScroll = () => {
       const { scrollTop } = container
-      // Progress from scroll 0 so marker moves immediately; trail still fades in via heroReveal
+      // Progress starts from scroll 0 so the marker moves immediately;
+      // the trail itself fades in via heroReveal.
       const totalProgressHeight = heroHeight + trailHeight
       const newProgress =
         totalProgressHeight > 0 ? Math.min(1, scrollTop / totalProgressHeight) : 0

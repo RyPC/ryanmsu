@@ -1,39 +1,27 @@
-// ---------------------------------------------------------------------------
 // Marching Squares — contour extraction and path stitching
-// ---------------------------------------------------------------------------
 //
 // Grid convention:
 //   heightmap[col][row], col in 0..gridW-1, row in 0..gridH-1
-//   Cell (i, j) has corners:
-//     TL = (i,   j)    TR = (i+1, j)
-//     BL = (i,   j+1)  BR = (i+1, j+1)
+//   Cell (i, j) corners: TL=(i,j)  TR=(i+1,j)  BL=(i,j+1)  BR=(i+1,j+1)
 //
 // Case index bits (MSB→LSB): TL=3, TR=2, BR=1, BL=0
 //   bit = 1 when corner value ≥ level (above the contour threshold)
 //
-// Edges (used in lookup table):
-//   0 = TOP    (between TL and TR, interpolated along row j)
-//   1 = RIGHT  (between TR and BR, interpolated along col i+1)
-//   2 = BOTTOM (between BL and BR, interpolated along row j+1)
-//   3 = LEFT   (between TL and BL, interpolated along col i)
+// Edges used in the lookup table:
+//   0 = TOP    (between TL and TR)
+//   1 = RIGHT  (between TR and BR)
+//   2 = BOTTOM (between BL and BR)
+//   3 = LEFT   (between TL and BL)
 
 export interface Point {
   x: number
   y: number
 }
 
-/** A continuous polyline of grid-space points. */
 export type Polyline = Point[]
 
-// ---------------------------------------------------------------------------
-// 16-case lookup table
-// Each entry lists the edge-pairs that form segments in that case.
+// 16-case lookup table. Each entry lists [edgeA, edgeB] pairs forming segments.
 // Cases 5 and 10 are saddle points — fixed disambiguation applied.
-// ---------------------------------------------------------------------------
-//
-// [edgeA, edgeB] means: draw a segment from the crossing on edgeA
-// to the crossing on edgeB.
-
 const CASE_SEGMENTS: [number, number][][] = [
   [],                   // 0000 = 0
   [[3, 2]],             // 0001 = 1:  BL          → LEFT–BOTTOM
@@ -53,52 +41,29 @@ const CASE_SEGMENTS: [number, number][][] = [
   [],                   // 1111 = 15
 ]
 
-// ---------------------------------------------------------------------------
-// Edge interpolation helpers
-// ---------------------------------------------------------------------------
-
 /**
- * Returns the grid-space point where the contour at `level` crosses
- * the given edge of cell (i, j).
- *
- *   Edge 0 (TOP):    between (i, j)   and (i+1, j)
- *   Edge 1 (RIGHT):  between (i+1, j) and (i+1, j+1)
- *   Edge 2 (BOTTOM): between (i, j+1) and (i+1, j+1)
- *   Edge 3 (LEFT):   between (i, j)   and (i, j+1)
+ * Returns the grid-space point where the contour at `level` crosses the given
+ * edge of cell (i, j). Edges: 0=TOP, 1=RIGHT, 2=BOTTOM, 3=LEFT.
  */
-function edgePoint(
-  i: number,
-  j: number,
-  edge: number,
-  level: number,
-  hm: number[][],
-): Point {
+function edgePoint(i: number, j: number, edge: number, level: number, hm: number[][]): Point {
   switch (edge) {
     case 0: {
-      // TOP: from TL=(i,j) to TR=(i+1,j)
-      const v0 = hm[i][j]
-      const v1 = hm[i + 1][j]
+      const v0 = hm[i][j], v1 = hm[i + 1][j]
       const t = v0 === v1 ? 0.5 : (level - v0) / (v1 - v0)
       return { x: i + t, y: j }
     }
     case 1: {
-      // RIGHT: from TR=(i+1,j) to BR=(i+1,j+1)
-      const v0 = hm[i + 1][j]
-      const v1 = hm[i + 1][j + 1]
+      const v0 = hm[i + 1][j], v1 = hm[i + 1][j + 1]
       const t = v0 === v1 ? 0.5 : (level - v0) / (v1 - v0)
       return { x: i + 1, y: j + t }
     }
     case 2: {
-      // BOTTOM: from BL=(i,j+1) to BR=(i+1,j+1)
-      const v0 = hm[i][j + 1]
-      const v1 = hm[i + 1][j + 1]
+      const v0 = hm[i][j + 1], v1 = hm[i + 1][j + 1]
       const t = v0 === v1 ? 0.5 : (level - v0) / (v1 - v0)
       return { x: i + t, y: j + 1 }
     }
     case 3: {
-      // LEFT: from TL=(i,j) to BL=(i,j+1)
-      const v0 = hm[i][j]
-      const v1 = hm[i][j + 1]
+      const v0 = hm[i][j], v1 = hm[i][j + 1]
       const t = v0 === v1 ? 0.5 : (level - v0) / (v1 - v0)
       return { x: i, y: j + t }
     }
@@ -107,28 +72,18 @@ function edgePoint(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Segment → continuous polyline stitching
-// ---------------------------------------------------------------------------
-
-/** Encode a point to a stable string key (1 decimal precision). */
 function ptKey(p: Point): string {
   return `${p.x.toFixed(3)},${p.y.toFixed(3)}`
 }
 
 /**
- * Accepts a flat list of segments (each segment is a pair of Points) and
- * connects them into continuous polylines by matching shared endpoints.
- *
- * The stitcher builds an adjacency map and greedily walks chains until
- * no further extension is possible.
+ * Connects a flat list of segments into continuous polylines by matching
+ * shared endpoints. Builds an adjacency map and greedily walks chains.
  */
 function stitchSegments(segments: [Point, Point][]): Polyline[] {
   if (segments.length === 0) return []
 
-  // Map: endpoint key → list of segment indices containing that endpoint
   const adj = new Map<string, number[]>()
-
   const register = (key: string, idx: number) => {
     const list = adj.get(key)
     if (list) list.push(idx)
@@ -147,10 +102,8 @@ function stitchSegments(segments: [Point, Point][]): Polyline[] {
     if (used[start]) continue
     used[start] = 1
 
-    // Build the chain from this starting segment
     const chain: Point[] = [segments[start][0], segments[start][1]]
 
-    // Extend the tail
     let extended = true
     while (extended) {
       extended = false
@@ -163,13 +116,11 @@ function stitchSegments(segments: [Point, Point][]): Polyline[] {
         used[idx] = 1
         extended = true
         const [a, b] = segments[idx]
-        // Append the far end of the segment
         chain.push(ptKey(a) === tailKey ? b : a)
         break
       }
     }
 
-    // Extend the head
     extended = true
     while (extended) {
       extended = false
@@ -193,15 +144,9 @@ function stitchSegments(segments: [Point, Point][]): Polyline[] {
   return polylines
 }
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
 /**
  * Extracts all contour polylines for the given `level` from `heightmap`.
- *
  * `heightmap[col][row]` — indexed by column first, then row.
- * Returns an array of continuous polylines in grid space.
  */
 export function extractContours(heightmap: number[][], level: number): Polyline[] {
   const gridW = heightmap.length
@@ -215,7 +160,6 @@ export function extractContours(heightmap: number[][], level: number): Polyline[
       const br = heightmap[i + 1][j + 1]
       const bl = heightmap[i][j + 1]
 
-      // Build 4-bit case index: bit3=TL, bit2=TR, bit1=BR, bit0=BL
       const caseIdx =
         (tl >= level ? 8 : 0) |
         (tr >= level ? 4 : 0) |

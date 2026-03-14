@@ -33,11 +33,14 @@ components/
                                switches between trail view and side-trail view,
                                drives the blow-off animation system
   trail/
-    TrailLayer.tsx            SVG trail path + animated marker + branch path rendering
+    TrailLayer.tsx            SVG trail path + animated marker + branch path rendering;
+                               delegates animation logic to useMarkerAnimation hook
+                               and endpoint dots to TrailEndpointDots
+    TrailEndpointDots.tsx     SVG clickable dots rendered at each side-trail endpoint
     TrailheadHero.tsx         Full-screen hero section (name, subtitle, scroll indicator)
     Checkpoint.tsx            Individual experience/project/education card
     ProgressIndicator.tsx     Fixed HUD (miles, elevation, projects, techs stats)
-    TrailMarker.tsx           Unused legacy marker component — do not delete, not used
+    TopographyBackground.tsx  Fixed full-bleed topo-line SVG background layer
   nav/
     SectionNav.tsx            Fixed left sidebar; links scroll to checkpoints;
                                exports SECTION_NAV_WIDTH = 180
@@ -48,16 +51,26 @@ components/
 data/
   experiences.ts            Array of Checkpoint objects; defines the Checkpoint interface
   sideTrails.ts             Record<string, SideTrailData>; defines SideTrailContent interface
+  topoPaths.ts              AUTO-GENERATED — do not edit manually (run npm run generate:topo)
 
 hooks/
   useTrailProgress.ts       Scroll listener → { progress: 0–1, heroReveal: 0–1 }
+  useMarkerAnimation.ts     All marker/pin/branch animation state and effects;
+                             reads from trailStore, returns values for TrailLayer rendering
+  useViewportSize.ts        Tracks window dimensions; used by SideTrailView for modal sizing
 
 lib/
   trailPath.ts              Pure geometry helpers — trail X positions, scroll height math
+  constants.ts              Shared animation timing and SVG geometry constants
+                             (branch delays, pin travel duration, view window dimensions)
 
 store/
   trailStore.ts             Zustand store — all shared state (active side trail,
                              branch position, return scroll, blow-off direction)
+
+scripts/
+  generateTopo.ts           Build-time script — generates data/topoPaths.ts
+                             Run: npx tsx scripts/generateTopo.ts
 ```
 
 ### Data Flow
@@ -65,7 +78,7 @@ store/
 ```
 User scrolls
   └─▶ useTrailProgress  ──▶  progress (0–1)
-                                ├─▶ TrailLayer  (marker Y position, viewBox spring)
+                                ├─▶ TrailLayer / useMarkerAnimation  (marker Y, viewBox spring)
                                 ├─▶ Checkpoint  (fade visibility)
                                 └─▶ ProgressIndicator (HUD stats)
 
@@ -73,7 +86,7 @@ User clicks "Side Trail" on a Checkpoint
   └─▶ trailStore.setActiveSideTrail(id, options)
         ├─▶ TrailViewTransition detects activeSideTrailId ≠ null
         │     └─▶ runs blowOff animation, mounts SideTrailView
-        └─▶ TrailLayer detects activeSideTrailId
+        └─▶ useMarkerAnimation (inside TrailLayer) detects activeSideTrailId
               └─▶ draws branch path, animates pin to endpoint
                     └─▶ trailStore.setBranchEndScreenPosition(pos)
                           └─▶ SideTrailView positions itself at screen coords
@@ -104,6 +117,9 @@ npm start
 
 # Lint the codebase
 npm run lint
+
+# Regenerate topo background paths (after changing terrain params)
+npx tsx scripts/generateTopo.ts
 ```
 
 There are no environment variables. No `.env` file is needed.
@@ -140,6 +156,9 @@ There is no database, no backend API, and no authentication layer.
     build. They should eventually be deleted but are currently harmless — leave them alone.
 12. **Do not change the `SECTION_NAV_WIDTH` export** from `SectionNav.tsx` without also
     updating every reference to it in `TrailViewTransition.tsx`.
+13. **Branch animation timing lives in `lib/constants.ts`** — `BRANCH_ANIMATION_DELAY`,
+    `PIN_TRAVEL_DELAY`, `PIN_TRAVEL_DURATION_BASE`, etc. Both `useMarkerAnimation` and
+    `SideTrailView` import from there. Never duplicate these values.
 
 ---
 
@@ -171,7 +190,8 @@ There are currently **no automated tests** in this repository. Until tests are a
 |------|--------|
 | `store/trailStore.ts` | All side-trail state flows through here; breaking the shape breaks the entire transition system |
 | `components/transition/TrailViewTransition.tsx` | Orchestrator of the entire blow-off / restore cycle; animation timing is carefully tuned |
-| `components/trail/TrailLayer.tsx` | SVG path coordinates, viewBox spring, and branch geometry are tightly coupled; changes ripple everywhere |
+| `hooks/useMarkerAnimation.ts` | Contains all marker travel, branch geometry, and pin animation logic; tightly coupled to TrailLayer SVG refs |
+| `lib/constants.ts` | Shared animation timing used by both `useMarkerAnimation` and `SideTrailView`; changing a value here without understanding the full timing chain will break the modal entrance |
 | `lib/trailPath.ts` | `getTrailXAtProgress` keyframes must match the SVG path in `TrailLayer.tsx` exactly |
 | `app/globals.css` | CSS custom properties here are used by Tailwind utilities and inline styles across all components |
 | `data/experiences.ts` | `locationOnTrail` values control where checkpoints appear on the SVG; wrong values break the visual layout |
@@ -227,15 +247,15 @@ checkpoint card appears. Converted to a scroll progress value via
 `locationToScrollProgress()` in `lib/trailPath.ts`.
 
 ### Side trail transition sequence
-1. User clicks "Side Trail" → `setActiveSideTrail(id, { clickedSide, branchProgress })`
+1. User clicks "Side Trail" → `setActiveSideTrail(id, { side, branchProgress })`
 2. `TrailViewTransition` detects change → blows off trail content (Framer Motion exit)
-3. `TrailLayer` draws branch SVG + animates pin along it (3.2 s total)
+3. `useMarkerAnimation` (inside TrailLayer) draws branch SVG + animates pin along it (~3.2 s)
 4. Pin reaches endpoint → `setBranchEndScreenPosition(pos)` written to store
-5. `SideTrailView` mounts after 3.6 s delay, reads `branchEndScreenPosition`
+5. `SideTrailView` modal animates in after pin arrival delay, reads `branchEndScreenPosition`
 6. User clicks "Return" → `setActiveSideTrail(null)` → content re-enters, scroll restored
 
 ### SVG coordinate system
-The trail SVG has a `viewBox` of `0 0 400 1400` (visible window). The full path spans
-4000 units tall. `viewYSpring` shifts the viewBox origin to follow the marker.
-All branch/endpoint positions are computed in SVG units then converted to screen pixels
-using `getBoundingClientRect()`.
+The trail SVG has a `viewBox` of `0 {viewY} 800 1400` (800 wide, 1400 tall visible window).
+The full path spans 4000 units tall. `viewYSpring` in `useMarkerAnimation` shifts the viewBox
+origin to follow the marker. All branch/endpoint positions are computed in SVG units then
+converted to screen pixels using `getBoundingClientRect()`.

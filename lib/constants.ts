@@ -1,0 +1,14 @@
+export const BRANCH_ANIMATION_DURATION = 0.5
+export const BRANCH_ANIMATION_DELAY = 0.3
+export const PIN_TRAVEL_DELAY = 0.6
+export const PIN_TRAVEL_DURATION_BASE = 1.6
+export const BRANCH_LENGTH_MIN = 0.5
+export const BRANCH_LENGTH_MAX = 2.0
+export const BRANCH_DEFAULT_X_OFFSET = 620
+export const BRANCH_DEFAULT_Y_OFFSET = 83
+
+export const TRAIL_SVG_WIDTH = 800
+export const VIEW_WINDOW_HEIGHT = 1400
+export const TRAIL_PATH_MIN_Y = 0
+export const TRAIL_PATH_MAX_Y = 4000
+export const HALF_VIEW_WINDOW_HEIGHT = VIEW_WINDOW_HEIGHT / 2

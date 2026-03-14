@@ -1,29 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useTrailStore } from "@/store/trailStore";
 import { sideTrails } from "@/data/sideTrails";
 import { SideTrailContent } from "./SideTrailContent";
+import { useViewportSize } from "@/hooks/useViewportSize";
+import {
+    BRANCH_ANIMATION_DELAY,
+    PIN_TRAVEL_DELAY,
+    PIN_TRAVEL_DURATION_BASE,
+    BRANCH_LENGTH_MIN,
+    BRANCH_LENGTH_MAX,
+} from "@/lib/constants";
 
-const MODAL_ABOVE_OFFSET = 24; // gap between branch point and modal bottom
-const EDGE_PADDING = 40; // min gap from viewport left/right edges
-
-// Branch timing constants — must stay in sync with TrailLayer.tsx
-const BRANCH_ANIMATION_DELAY = 0.3;
-const PIN_TRAVEL_DELAY = 0.6;
-const PIN_TRAVEL_DURATION_BASE = 1.6;
-const BRANCH_LENGTH_MIN = 0.5;
-const BRANCH_LENGTH_MAX = 2.0;
+const MODAL_ABOVE_OFFSET = 24;
+const EDGE_PADDING = 40;
 
 const modalVariants = {
-    hidden: {
-        opacity: 0,
-        scale: 0.88,
-        y: 28,
-    },
-    // `custom` receives the computed pin-arrival delay so the modal waits
-    // exactly until the pin reaches the branch endpoint.
+    hidden: { opacity: 0, scale: 0.88, y: 28 },
     visible: (pinArrivalDelay: number) => ({
         opacity: 1,
         scale: 1,
@@ -45,44 +39,16 @@ const modalVariants = {
     },
 };
 
-function useViewportSize() {
-    const [size, setSize] = useState(() =>
-        typeof window !== "undefined"
-            ? {
-                  width: document.documentElement.clientWidth,
-                  height: window.innerHeight,
-              }
-            : { width: 1200, height: 800 },
-    );
-    useEffect(() => {
-        const update = () =>
-            setSize({
-                width: document.documentElement.clientWidth,
-                height: window.innerHeight,
-            });
-        update();
-        window.addEventListener("resize", update);
-        return () => window.removeEventListener("resize", update);
-    }, []);
-    return size;
-}
-
 export function SideTrailView() {
     const { width: vw } = useViewportSize();
     const activeSideTrailId = useTrailStore((s) => s.activeSideTrailId);
     const setActiveSideTrail = useTrailStore((s) => s.setActiveSideTrail);
-    const branchEndScreenPosition = useTrailStore(
-        (s) => s.branchEndScreenPosition,
-    );
+    const branchEndScreenPosition = useTrailStore((s) => s.branchEndScreenPosition);
     const activeBranchLength = useTrailStore((s) => s.activeBranchLength);
-    const clampedBranchLength = Math.max(
-        BRANCH_LENGTH_MIN,
-        Math.min(BRANCH_LENGTH_MAX, activeBranchLength),
-    );
+
+    const clampedBranchLength = Math.max(BRANCH_LENGTH_MIN, Math.min(BRANCH_LENGTH_MAX, activeBranchLength));
     const pinArrivalDelay =
-        BRANCH_ANIMATION_DELAY +
-        PIN_TRAVEL_DELAY +
-        PIN_TRAVEL_DURATION_BASE * clampedBranchLength;
+        BRANCH_ANIMATION_DELAY + PIN_TRAVEL_DELAY + PIN_TRAVEL_DURATION_BASE * clampedBranchLength;
 
     if (!activeSideTrailId) return null;
 
@@ -90,30 +56,24 @@ export function SideTrailView() {
     if (!content) return null;
 
     const hasPosition = branchEndScreenPosition != null;
-
-    // Clamp horizontal position so modal has padding from left/right edges.
-    // Use full modalWidth for right-edge clamp (not halfW): actual rendered
-    // position can extend right of our computed center (transform/layout mismatch).
     const modalWidth = Math.min(vw * 0.95, 840);
     const halfW = modalWidth / 2;
     const maxCenterX = vw - modalWidth - EDGE_PADDING;
+
+    // Clamp centerX so the modal stays within horizontal viewport bounds.
+    // Use full modalWidth for the right-edge clamp since the rendered position
+    // can extend right of our computed center due to transform/layout differences.
     const centerX = hasPosition
-        ? Math.max(
-              halfW + EDGE_PADDING,
-              Math.min(branchEndScreenPosition.x, maxCenterX),
-          )
+        ? Math.max(halfW + EDGE_PADDING, Math.min(branchEndScreenPosition.x, maxCenterX))
         : undefined;
 
     return (
         <div className="fixed inset-0 pointer-events-none">
-            {/* Clickable backdrop - light dim to focus attention on modal */}
             <button
                 onClick={() => setActiveSideTrail(null)}
                 className="absolute inset-0 bg-black/20 pointer-events-auto cursor-default"
                 aria-label="Close modal"
             />
-
-            {/* Info modal - positioned above the branch point where the pin lands */}
             <motion.div
                 className="pointer-events-auto absolute z-30 max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl"
                 style={{
@@ -122,9 +82,7 @@ export function SideTrailView() {
                     ...(hasPosition
                         ? {
                               left: centerX,
-                              top:
-                                  branchEndScreenPosition.y -
-                                  MODAL_ABOVE_OFFSET,
+                              top: branchEndScreenPosition.y - MODAL_ABOVE_OFFSET,
                               transform: "translate(-50%, -100%)",
                           }
                         : {
@@ -140,24 +98,14 @@ export function SideTrailView() {
                 animate="visible"
                 exit="gone"
             >
-                <div
-                    className="max-h-[min(90vh,1000px)] overflow-y-auto bg-white/98 backdrop-blur-md p-6 border border-white/80"
-                >
-                    <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                        {content.title}
-                    </h2>
+                <div className="max-h-[min(90vh,1000px)] overflow-y-auto bg-white/98 backdrop-blur-md p-6 border border-white/80">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-3">{content.title}</h2>
                     <SideTrailContent content={content} />
-
                     <motion.button
                         onClick={() => setActiveSideTrail(null)}
                         className="mt-6 w-full py-2.5 px-4 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
                     >
-                        <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path
                                 strokeLinecap="round"
                                 strokeLinejoin="round"

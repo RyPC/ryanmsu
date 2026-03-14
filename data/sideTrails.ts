@@ -21,19 +21,6 @@ export interface SideTrailContent {
   sections: SideTrailSection[]
 }
 
-export const themeBackgrounds: Record<SideTrailTheme, string> = {
-  workshop:
-    'linear-gradient(135deg, #fef3c7 0%, #fed7aa 30%, #fdba74 60%, #fb923c 100%)',
-  lab: 'linear-gradient(160deg, #e0f2fe 0%, #bae6fd 25%, #7dd3fc 50%, #0ea5e9 80%)',
-  campus:
-    'linear-gradient(180deg, #f5f3ff 0%, #ede9fe 30%, #ddd6fe 60%, #c4b5fd 100%)',
-  corporate:
-    'linear-gradient(160deg, #f1f5f9 0%, #e2e8f0 25%, #94a3b8 60%, #475569 100%)',
-  startup:
-    'linear-gradient(180deg, #ecfdf5 0%, #d1fae5 25%, #6ee7b7 50%, #34d399 80%)',
-  academic:
-    'linear-gradient(160deg, #fefce8 0%, #fef9c3 25%, #fde68a 50%, #fcd34d 80%)',
-}
 
 export const sideTrails: Record<string, SideTrailContent> = {
   'first-projects': {
