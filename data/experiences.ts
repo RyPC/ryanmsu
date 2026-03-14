@@ -31,6 +31,12 @@ export interface Checkpoint {
   sideTrail?: boolean
   sideTrailId?: string
   sideTrailEndpoint?: SideTrailEndpoint
+  /**
+   * Multiplier applied to the branch path length (default 1.0).
+   * Values > 1.0 produce longer detours; values < 1.0 produce shorter ones.
+   * Scales both the visual branch geometry and pin travel duration.
+   */
+  branchLength?: number
   url?: string
   dates?: string
 }
@@ -64,6 +70,7 @@ export const experiences: Checkpoint[] = [
       xOffset: 632,
       yOffset: 95,
     },
+    branchLength: 0.8,
   },
   {
     id: 'uc-irvine',
@@ -93,6 +100,7 @@ export const experiences: Checkpoint[] = [
       xOffset: 592,
       yOffset: 100,
     },
+    branchLength: 1.0,
     dates: 'June 2024 – Oct. 2024',
   },
   {
@@ -112,6 +120,7 @@ export const experiences: Checkpoint[] = [
       xOffset: 672,
       yOffset: 88,
     },
+    branchLength: 1.3,
     url: 'https://ctc-uci.com',
     dates: 'Oct. 2024 – Present',
   },
@@ -132,6 +141,7 @@ export const experiences: Checkpoint[] = [
       xOffset: 648,
       yOffset: 105,
     },
+    branchLength: 1.15,
     url: 'https://www.veeva.com',
     dates: 'June 2025 – Sept. 2025',
   },
@@ -152,6 +162,7 @@ export const experiences: Checkpoint[] = [
       xOffset: 700,
       yOffset: 92,
     },
+    branchLength: 1.5,
     url: 'https://gowithapartner.com',
     dates: 'June 2025 – Present',
   },
@@ -172,6 +183,7 @@ export const experiences: Checkpoint[] = [
       xOffset: 608,
       yOffset: 98,
     },
+    branchLength: 0.9,
     dates: 'Feb. 2025 – Present',
   },
   {

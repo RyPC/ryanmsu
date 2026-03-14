@@ -154,6 +154,7 @@ export function TrailViewTransition() {
                     xOffset: checkpoint.sideTrailEndpoint?.xOffset,
                     yOffset: checkpoint.sideTrailEndpoint?.yOffset,
                 },
+                branchLength: checkpoint.branchLength,
             });
         },
         [getCheckpointCardSide, heroHeight, progressHeight, setActiveSideTrail],
@@ -172,6 +173,7 @@ export function TrailViewTransition() {
             <SectionNav
                 scrollContainerRef={scrollContainerRef}
                 progress={progress}
+                heroReveal={heroReveal}
                 heroHeight={heroHeight}
                 trailProgressHeight={progressHeight}
             />
@@ -242,10 +244,7 @@ export function TrailViewTransition() {
                             minHeight: `calc(100vh + ${trailScrollHeightPx}px)`,
                         }}
                     >
-                        <motion.div
-                            variants={blowOffItem(0, blowDirection)}
-                            style={{ paddingLeft: SECTION_NAV_WIDTH + CONTENT_NAV_GAP }}
-                        >
+                        <motion.div variants={blowOffItem(0, blowDirection)}>
                             <TrailheadHero />
                         </motion.div>
                         <motion.div

@@ -18,6 +18,7 @@ interface TrailState {
   branchProgress: number | null // progress when user branched off (for marker position)
   clickedSide: ClickedSide | null // which side the clicked checkpoint was on (for blow-away direction)
   selectedEndpoint: SelectedSideTrailEndpoint | null
+  activeBranchLength: number // branch path length multiplier (default 1.0)
   branchEndScreenPosition: BranchEndPosition | null // screen coords of branch end for modal placement
   returnScrollProgress: number | null // progress to restore when returning from side trail
   setActiveSideTrail: (
@@ -27,6 +28,7 @@ interface TrailState {
       side?: ClickedSide
       checkpointId?: string
       endpoint?: SelectedSideTrailEndpoint
+      branchLength?: number
     }
   ) => void
   setBranchEndScreenPosition: (pos: BranchEndPosition | null) => void
@@ -39,6 +41,7 @@ export const useTrailStore = create<TrailState>((set) => ({
   branchProgress: null,
   clickedSide: null,
   selectedEndpoint: null,
+  activeBranchLength: 1.0,
   branchEndScreenPosition: null,
   returnScrollProgress: null,
   setActiveSideTrail: (id, options) =>
@@ -49,6 +52,7 @@ export const useTrailStore = create<TrailState>((set) => ({
         id != null && typeof options?.progress === 'number' ? options.progress : null,
       clickedSide: id != null && options?.side ? options.side : null,
       selectedEndpoint: id != null ? options?.endpoint ?? null : null,
+      activeBranchLength: id != null ? (options?.branchLength ?? 1.0) : 1.0,
       branchEndScreenPosition: null, // reset when switching trails
       returnScrollProgress:
         id != null && typeof options?.progress === 'number'

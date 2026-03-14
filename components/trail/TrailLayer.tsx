@@ -32,13 +32,16 @@ interface TrailLayerProps {
     onOpenSideTrail: (checkpoint: Checkpoint) => void;
 }
 
-const BRANCH_VERTICAL_DISTANCE = 83; // ~50% longer — trail winds out to the side
-const BRANCH_ANIMATION_DURATION = 6;
+const BRANCH_VERTICAL_DISTANCE = 83;
+const BRANCH_ANIMATION_DURATION = 0.5;
 const BRANCH_ANIMATION_DELAY = 0.3;
-const PIN_TRAVEL_DURATION = 2.5;
-const PIN_TRAVEL_DELAY = 1; // After branch starts drawing
+const PIN_TRAVEL_DURATION_BASE = 1.6;
+const PIN_TRAVEL_DELAY = 0.6; // After branch starts drawing
 const BRANCH_DEFAULT_X_OFFSET = 620;
 const BRANCH_DEFAULT_Y_OFFSET = BRANCH_VERTICAL_DISTANCE;
+/** Clamp branchLength so endpoints stay on-screen and animations stay reasonable */
+const BRANCH_LENGTH_MIN = 0.5;
+const BRANCH_LENGTH_MAX = 2.0;
 
 /** Height of the visible trail "window" in SVG units. Pin stays centered in this viewport. */
 const VIEW_WINDOW_HEIGHT = 1400;
@@ -100,9 +103,15 @@ export function TrailLayer({
     const branchProgress = useTrailStore((s) => s.branchProgress);
     const clickedSide = useTrailStore((s) => s.clickedSide);
     const selectedEndpoint = useTrailStore((s) => s.selectedEndpoint);
+    const activeBranchLength = useTrailStore((s) => s.activeBranchLength);
     const setBranchEndScreenPosition = useTrailStore(
         (s) => s.setBranchEndScreenPosition,
     );
+    const clampedBranchLength = Math.max(
+        BRANCH_LENGTH_MIN,
+        Math.min(BRANCH_LENGTH_MAX, activeBranchLength),
+    );
+    const pinTravelDuration = PIN_TRAVEL_DURATION_BASE * clampedBranchLength;
     const [markerPoint, setMarkerPoint] = useState({ x: 200, y: 0 });
     const [branchPath, setBranchPath] = useState("");
     const [pinPosition, setPinPosition] = useState({ x: 200, y: 0 });
@@ -147,10 +156,12 @@ export function TrailLayer({
 
             const toLeft = clickedSide === "left";
             const sign = toLeft ? -1 : 1;
-            const xOffset =
+            const baseXOffset =
                 selectedEndpoint?.xOffset ?? BRANCH_DEFAULT_X_OFFSET;
-            const yOffset =
+            const baseYOffset =
                 selectedEndpoint?.yOffset ?? BRANCH_DEFAULT_Y_OFFSET;
+            const xOffset = baseXOffset * clampedBranchLength;
+            const yOffset = baseYOffset * clampedBranchLength;
             const endX = clamp(point.x + sign * xOffset, 16, 784);
             const endY = clamp(
                 point.y + yOffset,
@@ -175,6 +186,7 @@ export function TrailLayer({
         branchProgress,
         clickedSide,
         selectedEndpoint,
+        clampedBranchLength,
         pinBranchProgress,
     ]);
 
@@ -219,13 +231,13 @@ export function TrailLayer({
     useEffect(() => {
         if (isSideTrailMode && branchPath) {
             const controls = animate(pinBranchProgress, 1, {
-                duration: PIN_TRAVEL_DURATION,
+                duration: pinTravelDuration,
                 delay: PIN_TRAVEL_DELAY,
                 ease: [0.22, 1, 0.36, 1],
             });
             return () => controls.stop();
         }
-    }, [isSideTrailMode, branchPath, pinBranchProgress]);
+    }, [isSideTrailMode, branchPath, pinBranchProgress, pinTravelDuration]);
 
     // Update pin position from branch progress (or use markerPoint when not on branch)
     useMotionValueEvent(pinBranchProgress, "change", (latest) => {
@@ -373,9 +385,8 @@ export function TrailLayer({
                         strokeWidth="6"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        strokeDasharray="900"
-                        initial={{ strokeDashoffset: 900 }}
-                        animate={{ strokeDashoffset: 0 }}
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: 1 }}
                         transition={{
                             duration: BRANCH_ANIMATION_DURATION,
                             delay: BRANCH_ANIMATION_DELAY,
@@ -437,12 +448,21 @@ export function TrailLayer({
                         const endpointSide =
                             checkpoint.sideTrailEndpoint?.side ?? "right";
                         const sideSign = endpointSide === "left" ? -1 : 1;
+                        const checkpointBranchLength = Math.max(
+                            BRANCH_LENGTH_MIN,
+                            Math.min(
+                                BRANCH_LENGTH_MAX,
+                                checkpoint.branchLength ?? 1.0,
+                            ),
+                        );
                         const xOffset =
-                            checkpoint.sideTrailEndpoint?.xOffset ??
-                            BRANCH_DEFAULT_X_OFFSET;
+                            (checkpoint.sideTrailEndpoint?.xOffset ??
+                                BRANCH_DEFAULT_X_OFFSET) *
+                            checkpointBranchLength;
                         const yOffset =
-                            checkpoint.sideTrailEndpoint?.yOffset ??
-                            BRANCH_DEFAULT_Y_OFFSET;
+                            (checkpoint.sideTrailEndpoint?.yOffset ??
+                                BRANCH_DEFAULT_Y_OFFSET) *
+                            checkpointBranchLength;
 
                         const branchStartProgress = locationToScrollProgress(
                             checkpoint.locationOnTrail,

@@ -9,22 +9,31 @@ import { SideTrailContent } from "./SideTrailContent";
 const MODAL_ABOVE_OFFSET = 24; // gap between branch point and modal bottom
 const EDGE_PADDING = 40; // min gap from viewport left/right edges
 
+// Branch timing constants — must stay in sync with TrailLayer.tsx
+const BRANCH_ANIMATION_DELAY = 0.3;
+const PIN_TRAVEL_DELAY = 0.6;
+const PIN_TRAVEL_DURATION_BASE = 1.6;
+const BRANCH_LENGTH_MIN = 0.5;
+const BRANCH_LENGTH_MAX = 2.0;
+
 const modalVariants = {
     hidden: {
         opacity: 0,
         scale: 0.88,
         y: 28,
     },
-    visible: {
+    // `custom` receives the computed pin-arrival delay so the modal waits
+    // exactly until the pin reaches the branch endpoint.
+    visible: (pinArrivalDelay: number) => ({
         opacity: 1,
         scale: 1,
         y: 0,
         transition: {
             duration: 0.55,
-            delay: 3.6,
+            delay: pinArrivalDelay,
             ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
         },
-    },
+    }),
     gone: {
         opacity: 0,
         scale: 0.9,
@@ -65,6 +74,15 @@ export function SideTrailView() {
     const branchEndScreenPosition = useTrailStore(
         (s) => s.branchEndScreenPosition,
     );
+    const activeBranchLength = useTrailStore((s) => s.activeBranchLength);
+    const clampedBranchLength = Math.max(
+        BRANCH_LENGTH_MIN,
+        Math.min(BRANCH_LENGTH_MAX, activeBranchLength),
+    );
+    const pinArrivalDelay =
+        BRANCH_ANIMATION_DELAY +
+        PIN_TRAVEL_DELAY +
+        PIN_TRAVEL_DURATION_BASE * clampedBranchLength;
 
     if (!activeSideTrailId) return null;
 
@@ -116,6 +134,7 @@ export function SideTrailView() {
                               width: "min(95vw, 840px)",
                           }),
                 }}
+                custom={pinArrivalDelay}
                 variants={modalVariants}
                 initial="hidden"
                 animate="visible"

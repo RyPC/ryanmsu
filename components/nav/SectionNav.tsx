@@ -9,6 +9,7 @@ const NAV_WIDTH = 180;
 interface SectionNavProps {
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   progress: number;
+  heroReveal: number;
   heroHeight: number;
   trailProgressHeight: number;
 }
@@ -40,6 +41,7 @@ function getScrollTopForSection(
 export function SectionNav({
   scrollContainerRef,
   progress,
+  heroReveal,
   heroHeight,
   trailProgressHeight,
 }: SectionNavProps) {
@@ -72,9 +74,11 @@ export function SectionNav({
   };
 
   return (
-    <nav
+    <motion.nav
       className="fixed left-0 top-0 bottom-0 z-30 flex flex-col justify-center py-12 px-4"
       style={{ width: NAV_WIDTH }}
+      animate={{ opacity: heroReveal }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
     >
       <div className="flex flex-col gap-1">
         {navItems.map((item) => {
@@ -114,7 +118,7 @@ export function SectionNav({
           );
         })}
       </div>
-    </nav>
+    </motion.nav>
   );
 }
 
