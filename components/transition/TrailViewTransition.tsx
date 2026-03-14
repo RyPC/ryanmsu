@@ -1,21 +1,25 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { TrailLayer } from "@/components/trail/TrailLayer";
 import { TrailheadHero } from "@/components/trail/TrailheadHero";
 import { Checkpoint } from "@/components/trail/Checkpoint";
 import { ProgressIndicator } from "@/components/trail/ProgressIndicator";
 import { SideTrailView } from "@/components/side-trail/SideTrailView";
+import { SectionNav, SECTION_NAV_WIDTH } from "@/components/nav/SectionNav";
 import { useTrailProgress } from "@/hooks/useTrailProgress";
 import { useTrailStore } from "@/store/trailStore";
-import { experiences } from "@/data/experiences";
+import { experiences, type Checkpoint as CheckpointType } from "@/data/experiences";
+import {
+    getTrailMetricsFromExperiences,
+    locationToScrollProgress,
+} from "@/lib/trailPath";
 
-const TRAIL_HEIGHT_PX = 30000;
-/** Checkpoints are positioned at locationOnTrail * 4000; scroll container and layout stay the same. */
-const TRAIL_CONTENT_HEIGHT = 4000;
-/** Larger = slower pin movement along trail per scroll. Progress 0→1 over this many pixels. */
-const TRAIL_PROGRESS_HEIGHT = 20000;
+/** Extra gap between nav and content so cards don't overlap */
+const CONTENT_NAV_GAP = 24;
+/** Trail confined to center band - width as % of content area */
+const TRAIL_ZONE_WIDTH_PCT = 28;
 
 const blowOffContainer = {
     exit: {
@@ -57,17 +61,24 @@ export function TrailViewTransition() {
     const activeSideTrailId = useTrailStore((s) => s.activeSideTrailId);
     const clickedSide = useTrailStore((s) => s.clickedSide);
     const returnScrollProgress = useTrailStore((s) => s.returnScrollProgress);
+    const setActiveSideTrail = useTrailStore((s) => s.setActiveSideTrail);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [heroHeight, setHeroHeight] = useState(
         typeof window !== "undefined" ? window.innerHeight : 800,
     );
     const [trailContentVisible, setTrailContentVisible] = useState(true);
     const hasVisitedSideTrail = useRef(false);
+    const trailMetrics = useMemo(
+        () => getTrailMetricsFromExperiences(experiences),
+        [],
+    );
+    const { contentHeight, progressHeight } = trailMetrics;
+    const trailScrollHeightPx = heroHeight + progressHeight;
 
     const showTrailContent = !activeSideTrailId || trailContentVisible;
     const { progress, heroReveal } = useTrailProgress(scrollContainerRef, {
         heroHeight,
-        trailHeight: TRAIL_PROGRESS_HEIGHT,
+        trailHeight: progressHeight,
         containerReady: showTrailContent,
     });
 
@@ -96,7 +107,7 @@ export function TrailViewTransition() {
             const { returnScrollProgress: p, heroHeight: h } =
                 scrollRestoreRef.current;
             if (p != null) {
-                const scrollTop = p * (h + TRAIL_PROGRESS_HEIGHT);
+                const scrollTop = p * (h + progressHeight);
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         el.scrollTo({ top: scrollTop, behavior: "auto" });
@@ -104,11 +115,47 @@ export function TrailViewTransition() {
                 });
             }
         }
-    }, []);
+    }, [progressHeight]);
 
     const isSideTrailMode = !!activeSideTrailId;
     // Blow opposite to clicked side: right-click → blow left, left-click → blow right
     const blowDirection = clickedSide === "right" ? "left" : "right";
+    const checkpointItems = experiences.filter((c) => c.id !== "trailhead");
+    const sideTrailCheckpoints = checkpointItems.filter(
+        (c) => c.sideTrail && c.sideTrailId,
+    );
+
+    const getCheckpointCardSide = useCallback((checkpointId: string) => {
+        const checkpointIndex = checkpointItems.findIndex(
+            (checkpoint) => checkpoint.id === checkpointId,
+        );
+        if (checkpointIndex < 0) return "right" as const;
+        return checkpointIndex % 2 === 0 ? "left" : "right";
+    }, [checkpointItems]);
+
+    const handleOpenSideTrail = useCallback(
+        (checkpoint: CheckpointType) => {
+            if (!checkpoint.sideTrailId) return;
+            const branchProgress = locationToScrollProgress(
+                checkpoint.locationOnTrail,
+                heroHeight,
+                progressHeight,
+            );
+            const side =
+                checkpoint.sideTrailEndpoint?.side ??
+                getCheckpointCardSide(checkpoint.id);
+            setActiveSideTrail(checkpoint.sideTrailId, {
+                progress: branchProgress,
+                side,
+                checkpointId: checkpoint.id,
+                endpoint: {
+                    xOffset: checkpoint.sideTrailEndpoint?.xOffset,
+                    yOffset: checkpoint.sideTrailEndpoint?.yOffset,
+                },
+            });
+        },
+        [getCheckpointCardSide, heroHeight, progressHeight, setActiveSideTrail],
+    );
 
     return (
         <div
@@ -116,13 +163,33 @@ export function TrailViewTransition() {
                 activeSideTrailId ? "overflow-visible" : "overflow-hidden"
             }`}
         >
-            {/* Trail layer - fixed overlay above scroll content, pointer-events-none so checkpoints stay clickable */}
-            <div className="fixed inset-0 z-20 pointer-events-none">
-                <TrailLayer
-                    progress={progress}
-                    heroReveal={heroReveal}
-                    isSideTrailMode={isSideTrailMode}
-                />
+            {/* Section nav - fixed left, overlays scroll content; background is shared via full-width scroll */}
+            <SectionNav
+                scrollContainerRef={scrollContainerRef}
+                progress={progress}
+                heroHeight={heroHeight}
+                trailProgressHeight={progressHeight}
+            />
+
+            {/* Trail layer - confined to centered band, cards go around it */}
+            <div
+                className="fixed top-0 right-0 bottom-0 z-20 pointer-events-none flex justify-center"
+                style={{ left: SECTION_NAV_WIDTH + CONTENT_NAV_GAP }}
+            >
+                <div
+                    className="h-full flex-shrink-0"
+                    style={{ width: `${TRAIL_ZONE_WIDTH_PCT}%`, maxWidth: 280 }}
+                >
+                    <TrailLayer
+                        progress={progress}
+                        heroReveal={heroReveal}
+                        isSideTrailMode={isSideTrailMode}
+                        sideTrailCheckpoints={sideTrailCheckpoints}
+                        heroHeight={heroHeight}
+                        trailProgressHeight={progressHeight}
+                        onOpenSideTrail={handleOpenSideTrail}
+                    />
+                </div>
             </div>
 
             {/* Trail content: unmounts after exit for clean return */}
@@ -135,6 +202,15 @@ export function TrailViewTransition() {
                             ? "pointer-events-none overflow-x-visible"
                             : "overflow-x-hidden"
                     }`}
+                    style={
+                        activeSideTrailId
+                            ? {
+                                  position: "fixed",
+                                  inset: 0,
+                                  zIndex: 5,
+                              }
+                            : undefined
+                    }
                     variants={blowOffContainer}
                     initial={
                         hasVisitedSideTrail.current
@@ -153,44 +229,47 @@ export function TrailViewTransition() {
                     onAnimationComplete={
                         activeSideTrailId ? handleTrailExitComplete : undefined
                     }
-                    style={
-                        activeSideTrailId
-                            ? {
-                                  position: "fixed",
-                                  inset: 0,
-                                  zIndex: 5,
-                              }
-                            : undefined
-                    }
                 >
-                    <motion.div variants={blowOffItem(0, blowDirection)}>
-                        <TrailheadHero />
-                    </motion.div>
-                    <motion.div
-                        className="relative w-full"
-                        style={{ minHeight: `${TRAIL_HEIGHT_PX}px` }}
-                        variants={blowOffTrailArea}
+                    {/* Wrapper establishes full scroll height so background fills entire trail */}
+                    <div
+                        className="relative"
+                        style={{
+                            minHeight: `calc(100vh + ${trailScrollHeightPx}px)`,
+                        }}
                     >
+                        {/* Shared background - fills wrapper, full scroll height */}
                         <div
                             className="absolute inset-0 pointer-events-none -z-10"
                             style={{
                                 background: `linear-gradient(to bottom, 
-                    #d4e6d4 0%, #e8e0c8 25%, #d4d8e0 50%, #b8c8d8 75%, #a0b4c8 100%)`,
+                                    #d4e6d4 0%, #e8e0c8 25%, #d4d8e0 50%, #b8c8d8 75%, #a0b4c8 100%)`,
                             }}
                         />
+                        <motion.div
+                            variants={blowOffItem(0, blowDirection)}
+                            style={{ paddingLeft: SECTION_NAV_WIDTH + CONTENT_NAV_GAP }}
+                        >
+                            <TrailheadHero />
+                        </motion.div>
+                        <motion.div
+                            className="relative w-full"
+                            style={{
+                                minHeight: `${trailScrollHeightPx}px`,
+                                paddingLeft: SECTION_NAV_WIDTH + CONTENT_NAV_GAP,
+                            }}
+                            variants={blowOffTrailArea}
+                        >
                         <ProgressIndicator progress={progress} />
-                        {experiences
-                            .filter((c) => c.id !== "trailhead")
-                            .map((checkpoint, index) => {
-                                const totalHeight = heroHeight + TRAIL_PROGRESS_HEIGHT;
+                        {checkpointItems.map((checkpoint, index) => {
+                                const totalHeight = heroHeight + progressHeight;
                                 const thresholdLow =
                                     (checkpoint.locationOnTrail *
-                                        TRAIL_CONTENT_HEIGHT +
+                                        contentHeight +
                                         0.125 * heroHeight) /
                                     totalHeight;
                                 const thresholdHigh =
                                     (checkpoint.locationOnTrail *
-                                        TRAIL_CONTENT_HEIGHT +
+                                        contentHeight +
                                         0.875 * heroHeight) /
                                     totalHeight;
                                 const isVisible =
@@ -202,7 +281,7 @@ export function TrailViewTransition() {
                                         checkpoint={checkpoint}
                                         index={index}
                                         isVisible={isVisible}
-                                        currentProgress={progress}
+                                        onOpenSideTrail={handleOpenSideTrail}
                                         exitVariants={blowOffItem(
                                             index + 1,
                                             blowDirection,
@@ -210,34 +289,36 @@ export function TrailViewTransition() {
                                     />
                                 );
                             })}
-                    </motion.div>
+                        </motion.div>
+                    </div>
                 </motion.div>
             )}
 
             <AnimatePresence mode="wait">
                 {activeSideTrailId && (
-                    <motion.div
-                        key="side-trail"
-                        initial={{ opacity: 0 }}
-                        animate={{
-                            opacity: 1,
-                            transition: {
-                                duration: 0.3,
-                                delay: 0.1,
-                                ease: [0.22, 1, 0.36, 1],
-                            },
-                        }}
-                        exit={{
-                            opacity: 0,
-                            transition: {
-                                duration: 0.4,
-                                ease: [0.22, 1, 0.36, 1],
-                            },
-                        }}
-                        className="absolute inset-0 z-20"
-                    >
-                        <SideTrailView />
-                    </motion.div>
+                <motion.div
+                    key="side-trail"
+                    initial={{ opacity: 0 }}
+                    animate={{
+                        opacity: 1,
+                        transition: {
+                            duration: 0.3,
+                            delay: 0.1,
+                            ease: [0.22, 1, 0.36, 1],
+                        },
+                    }}
+                    exit={{
+                        opacity: 0,
+                        transition: {
+                            duration: 0.4,
+                            ease: [0.22, 1, 0.36, 1],
+                        },
+                    }}
+                    className="absolute top-0 right-0 bottom-0 z-20"
+                    style={{ left: SECTION_NAV_WIDTH }}
+                >
+                    <SideTrailView />
+                </motion.div>
                 )}
             </AnimatePresence>
         </div>

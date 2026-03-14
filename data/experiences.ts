@@ -1,6 +1,23 @@
 export type CheckpointIcon = 'campsite' | 'peak' | 'lab' | 'computer' | 'startup' | 'trailhead'
 export type CheckpointType = 'trailhead' | 'checkpoint' | 'summit'
 export type CheckpointVariant = 'experience' | 'project' | 'education'
+export type SideTrailBranchSide = 'left' | 'right'
+
+export interface SideTrailEndpoint {
+  side: SideTrailBranchSide
+  /**
+   * Horizontal offset in TrailLayer SVG units (0-400 width).
+   * Positive values move farther to the selected side.
+   */
+  xOffset?: number
+  /**
+   * Vertical offset in TrailLayer SVG units (0-4000 height).
+   * Positive values move endpoint lower than the branch start.
+   */
+  yOffset?: number
+  /** Optional compact label override shown next to marker. */
+  label?: string
+}
 
 export interface Checkpoint {
   id: string
@@ -13,6 +30,7 @@ export interface Checkpoint {
   techStack?: string[]
   sideTrail?: boolean
   sideTrailId?: string
+  sideTrailEndpoint?: SideTrailEndpoint
   url?: string
   dates?: string
 }
@@ -41,6 +59,11 @@ export const experiences: Checkpoint[] = [
     techStack: ['MongoDB', 'Express', 'React', 'Node.js', 'C++', 'ESP32', 'AWS'],
     sideTrail: true,
     sideTrailId: 'first-projects',
+    sideTrailEndpoint: {
+      side: 'left',
+      xOffset: 140,
+      yOffset: 92,
+    },
   },
   {
     id: 'uc-irvine',
@@ -65,6 +88,11 @@ export const experiences: Checkpoint[] = [
     techStack: ['Python', 'OpenAI', 'NLP', 'AWS RDS', 'PostgreSQL'],
     sideTrail: true,
     sideTrailId: 'biorobotics',
+    sideTrailEndpoint: {
+      side: 'left',
+      xOffset: 132,
+      yOffset: 86,
+    },
     dates: 'June 2024 – Oct. 2024',
   },
   {
@@ -79,6 +107,11 @@ export const experiences: Checkpoint[] = [
     techStack: ['React', 'Node.js', 'AWS EC2', 'S3', 'PostgreSQL'],
     sideTrail: true,
     sideTrailId: 'commit-the-change',
+    sideTrailEndpoint: {
+      side: 'right',
+      xOffset: 136,
+      yOffset: 84,
+    },
     url: 'https://ctc-uci.com',
     dates: 'Oct. 2024 – Present',
   },
@@ -94,6 +127,11 @@ export const experiences: Checkpoint[] = [
     techStack: ['Java', 'Spring Boot', 'React', 'JavaScript'],
     sideTrail: true,
     sideTrailId: 'veeva',
+    sideTrailEndpoint: {
+      side: 'left',
+      xOffset: 128,
+      yOffset: 84,
+    },
     url: 'https://www.veeva.com',
     dates: 'June 2025 – Sept. 2025',
   },
@@ -109,6 +147,11 @@ export const experiences: Checkpoint[] = [
     techStack: ['React Native', 'TypeScript', 'Supabase', 'PostgreSQL'],
     sideTrail: true,
     sideTrailId: 'gowith',
+    sideTrailEndpoint: {
+      side: 'right',
+      xOffset: 144,
+      yOffset: 96,
+    },
     url: 'https://gowithapartner.com',
     dates: 'June 2025 – Present',
   },
@@ -124,6 +167,11 @@ export const experiences: Checkpoint[] = [
     techStack: ['OpenAI GPT-4o', 'MongoDB', 'React', 'Node.js'],
     sideTrail: true,
     sideTrailId: 'anthropology-research',
+    sideTrailEndpoint: {
+      side: 'left',
+      xOffset: 130,
+      yOffset: 88,
+    },
     dates: 'Feb. 2025 – Present',
   },
   {

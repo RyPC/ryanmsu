@@ -2,13 +2,18 @@
 
 import { motion, type Variants } from 'framer-motion'
 import type { Checkpoint as CheckpointType } from '@/data/experiences'
-import { useTrailStore } from '@/store/trailStore'
+import { TRAIL_CONTENT_HEIGHT } from '@/lib/trailPath'
+
+/** Trail zone is centered; cards go left/right of it. Left/right bounds as % of content width. */
+const TRAIL_ZONE_LEFT_PCT = 36
+const TRAIL_ZONE_RIGHT_PCT = 64
+const CARD_TRAIL_GAP = 24
 
 interface CheckpointProps {
   checkpoint: CheckpointType
   index: number
   isVisible: boolean
-  currentProgress?: number
+  onOpenSideTrail: (checkpoint: CheckpointType) => void
   exitVariants?: Variants
 }
 
@@ -50,21 +55,27 @@ const iconPaths: Record<string, string> = {
     'M13 10V3L4 14h7v7l9-11h-7z',
 }
 
-export function Checkpoint({ checkpoint, index, isVisible, currentProgress = 0, exitVariants }: CheckpointProps) {
-  const setActiveSideTrail = useTrailStore((s) => s.setActiveSideTrail)
+export function Checkpoint({ checkpoint, index, isVisible, onOpenSideTrail, exitVariants }: CheckpointProps) {
   const sideOffset = index % 2 === 0 ? 'left' : 'right'
   const styles = variantStyles[checkpoint.variant]
   const isEducation = checkpoint.variant === 'education'
 
+  // Cards alternate left/right of the trail zone
+  const positionStyle =
+    sideOffset === 'left'
+      ? { right: `calc(${100 - TRAIL_ZONE_LEFT_PCT}% + ${CARD_TRAIL_GAP}px)` }
+      : { left: `calc(${TRAIL_ZONE_RIGHT_PCT}% + ${CARD_TRAIL_GAP}px)` }
+
   return (
     <motion.div
       variants={exitVariants}
-      className={`absolute z-10 ${sideOffset === 'left' ? 'left-4 md:left-12 lg:left-20' : 'right-4 md:right-12 lg:right-20'} ${
+      className={`absolute z-10 ${
         isEducation ? 'w-96 max-w-[calc(100vw-2rem)]' : 'w-72 max-w-[calc(100vw-2rem)]'
       }`}
       style={{
-        top: `${checkpoint.locationOnTrail * 4000}px`,
+        top: `${checkpoint.locationOnTrail * TRAIL_CONTENT_HEIGHT}px`,
         transform: 'translateY(-50%)',
+        ...positionStyle,
       }}
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={
@@ -131,10 +142,7 @@ export function Checkpoint({ checkpoint, index, isVisible, currentProgress = 0, 
         )}
         {checkpoint.sideTrail && styles.button && (
           <button
-            onClick={() =>
-              checkpoint.sideTrailId &&
-              setActiveSideTrail(checkpoint.sideTrailId, currentProgress, sideOffset)
-            }
+            onClick={() => onOpenSideTrail(checkpoint)}
             className={`w-full py-2 px-3 text-sm font-medium rounded-lg transition-colors cursor-pointer ${styles.button}`}
           >
             {styles.buttonText}

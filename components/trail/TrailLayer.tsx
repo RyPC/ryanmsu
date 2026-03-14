@@ -1,7 +1,9 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, type KeyboardEvent } from "react";
 import { motion, useSpring, useMotionValueEvent, animate } from "framer-motion";
+import { type Checkpoint } from "@/data/experiences";
+import { getTrailXAtProgress, locationToScrollProgress } from "@/lib/trailPath";
 import { useTrailStore } from "@/store/trailStore";
 
 const MAIN_PATH =
@@ -12,6 +14,10 @@ interface TrailLayerProps {
     /** 0 when at hero, 1 when scrolled past. Used to hide trail on starter screen. */
     heroReveal: number;
     isSideTrailMode: boolean;
+    sideTrailCheckpoints: Checkpoint[];
+    heroHeight: number;
+    trailProgressHeight: number;
+    onOpenSideTrail: (checkpoint: Checkpoint) => void;
 }
 
 const BRANCH_VERTICAL_DISTANCE = 83; // ~50% longer — trail winds out to the side
@@ -19,9 +25,14 @@ const BRANCH_ANIMATION_DURATION = 6;
 const BRANCH_ANIMATION_DELAY = 0.3;
 const PIN_TRAVEL_DURATION = 2.5;
 const PIN_TRAVEL_DELAY = 1; // After branch starts drawing
+const BRANCH_DEFAULT_X_OFFSET = 132;
+const BRANCH_DEFAULT_Y_OFFSET = BRANCH_VERTICAL_DISTANCE;
 
 /** Height of the visible trail "window" in SVG units. Pin stays centered in this viewport. */
 const VIEW_WINDOW_HEIGHT = 1400;
+const TRAIL_PATH_MIN_Y = 0;
+const TRAIL_PATH_MAX_Y = 4000;
+const HALF_VIEW_WINDOW_HEIGHT = VIEW_WINDOW_HEIGHT / 2;
 
 /** Marker: circle (you) + arrow (direction). Arrow extends from top of circle. */
 const MARKER_CIRCLE_R = 13;
@@ -35,6 +46,10 @@ function getPointOnPath(pathEl: SVGPathElement | null, t: number) {
     const len = pathEl.getTotalLength();
     const pt = pathEl.getPointAtLength(t * len);
     return { x: pt.x, y: pt.y };
+}
+
+function clamp(value: number, min: number, max: number) {
+    return Math.max(min, Math.min(max, value));
 }
 
 /** Returns angle in radians: direction of path at t. 0 = down in SVG coords; +PI = up when scrolling backward */
@@ -62,12 +77,17 @@ export function TrailLayer({
     progress,
     heroReveal,
     isSideTrailMode,
+    sideTrailCheckpoints,
+    heroHeight,
+    trailProgressHeight,
+    onOpenSideTrail,
 }: TrailLayerProps) {
     const pathRef = useRef<SVGPathElement>(null);
     const branchPathRef = useRef<SVGPathElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const branchProgress = useTrailStore((s) => s.branchProgress);
     const clickedSide = useTrailStore((s) => s.clickedSide);
+    const selectedEndpoint = useTrailStore((s) => s.selectedEndpoint);
     const setBranchEndScreenPosition = useTrailStore(
         (s) => s.setBranchEndScreenPosition,
     );
@@ -81,12 +101,12 @@ export function TrailLayer({
     const effectiveProgress =
         isSideTrailMode && branchProgress != null ? branchProgress : progress;
 
-    const targetViewY = Math.max(
-        0,
-        Math.min(
-            markerPoint.y - VIEW_WINDOW_HEIGHT / 2,
-            4000 - VIEW_WINDOW_HEIGHT,
-        ),
+    const minViewY = TRAIL_PATH_MIN_Y - HALF_VIEW_WINDOW_HEIGHT;
+    const maxViewY = TRAIL_PATH_MAX_Y - HALF_VIEW_WINDOW_HEIGHT;
+    const targetViewY = clamp(
+        markerPoint.y - HALF_VIEW_WINDOW_HEIGHT,
+        minViewY,
+        maxViewY,
     );
     const viewYSpring = useSpring(targetViewY, {
         stiffness: 80,
@@ -125,23 +145,36 @@ export function TrailLayer({
         if (isSideTrailMode && branchProgress != null && clickedSide) {
             const toLeft = clickedSide === "left";
             const sign = toLeft ? -1 : 1;
-            const endX = toLeft ? 0 : 400;
-            const endY = point.y + BRANCH_VERTICAL_DISTANCE;
+            const xOffset =
+                selectedEndpoint?.xOffset ?? BRANCH_DEFAULT_X_OFFSET;
+            const yOffset =
+                selectedEndpoint?.yOffset ?? BRANCH_DEFAULT_Y_OFFSET;
+            const endX = clamp(point.x + sign * xOffset, 16, 384);
+            const endY = clamp(point.y + yOffset, TRAIL_PATH_MIN_Y, TRAIL_PATH_MAX_Y);
+            const deltaX = endX - point.x;
+            const deltaY = endY - point.y;
+
             // Path with three gentle bends, ending in a straight segment
-            const bend1x = point.x + sign * 70;
-            const bend1y = point.y + 20;
-            const bend2x = point.x + sign * 135;
-            const bend2y = point.y + 45;
-            const bend3x = point.x + sign * 195;
-            const bend3y = point.y + 68;
+            const bend1x = point.x + deltaX * 0.42;
+            const bend1y = point.y + Math.max(deltaY * 0.24, 12);
+            const bend2x = point.x + deltaX * 0.78;
+            const bend2y = point.y + Math.max(deltaY * 0.58, 32);
+            const bend3x = point.x + deltaX * 0.94;
+            const bend3y = point.y + Math.max(deltaY * 0.84, 52);
             setBranchPath(
-                `M ${point.x} ${point.y} C ${point.x + sign * 45} ${point.y + 10}, ${point.x + sign * 62} ${point.y + 15}, ${bend1x} ${bend1y} C ${point.x + sign * 55} ${point.y + 30}, ${point.x + sign * 108} ${point.y + 38}, ${bend2x} ${bend2y} C ${point.x + sign * 118} ${point.y + 55}, ${point.x + sign * 165} ${point.y + 62}, ${bend3x} ${bend3y} L ${endX} ${endY}`,
+                `M ${point.x} ${point.y} C ${point.x + deltaX * 0.16} ${point.y + Math.max(deltaY * 0.08, 8)}, ${point.x + deltaX * 0.3} ${point.y + Math.max(deltaY * 0.14, 14)}, ${bend1x} ${bend1y} C ${point.x + deltaX * 0.5} ${point.y + Math.max(deltaY * 0.34, 24)}, ${point.x + deltaX * 0.66} ${point.y + Math.max(deltaY * 0.46, 34)}, ${bend2x} ${bend2y} C ${point.x + deltaX * 0.82} ${point.y + Math.max(deltaY * 0.66, 44)}, ${point.x + deltaX * 0.9} ${point.y + Math.max(deltaY * 0.78, 52)}, ${bend3x} ${bend3y} L ${endX} ${endY}`,
             );
         } else {
             setBranchPath("");
             pinBranchProgress.set(0);
         }
-    }, [effectiveProgress, isSideTrailMode, branchProgress, clickedSide]);
+    }, [
+        effectiveProgress,
+        isSideTrailMode,
+        branchProgress,
+        clickedSide,
+        selectedEndpoint,
+    ]);
 
     // Animate pin along the branch once path is drawn
     useEffect(() => {
@@ -353,6 +386,128 @@ export function TrailLayer({
                         strokeLinejoin="round"
                     />
                 </motion.g>
+                {!isSideTrailMode &&
+                    sideTrailCheckpoints.map((checkpoint) => {
+                        if (!checkpoint.sideTrail || !checkpoint.sideTrailId) {
+                            return null;
+                        }
+                        const endpointSide =
+                            checkpoint.sideTrailEndpoint?.side ?? "right";
+                        const sideSign = endpointSide === "left" ? -1 : 1;
+                        const xOffset =
+                            checkpoint.sideTrailEndpoint?.xOffset ??
+                            BRANCH_DEFAULT_X_OFFSET;
+                        const yOffset =
+                            checkpoint.sideTrailEndpoint?.yOffset ??
+                            BRANCH_DEFAULT_Y_OFFSET;
+
+                        const branchStartProgress = locationToScrollProgress(
+                            checkpoint.locationOnTrail,
+                            heroHeight,
+                            trailProgressHeight,
+                        );
+                        const path = pathRef.current;
+                        const fallbackStartX =
+                            getTrailXAtProgress(branchStartProgress);
+                        const fallbackStartY = branchStartProgress * TRAIL_PATH_MAX_Y;
+                        let startX = fallbackStartX;
+                        let startY = fallbackStartY;
+
+                        if (path) {
+                            const pathLength = path.getTotalLength();
+                            const pathT = clamp(branchStartProgress, 0, 1);
+                            const startPoint = path.getPointAtLength(
+                                pathT * pathLength,
+                            );
+                            startX = startPoint.x;
+                            startY = startPoint.y;
+                        }
+
+                        const endpointX = clamp(
+                            startX + sideSign * xOffset,
+                            16,
+                            384,
+                        );
+                        const endpointY = clamp(
+                            startY + yOffset,
+                            TRAIL_PATH_MIN_Y,
+                            TRAIL_PATH_MAX_Y,
+                        );
+                        if (
+                            endpointY < viewY - 120 ||
+                            endpointY > viewY + VIEW_WINDOW_HEIGHT + 120
+                        ) {
+                            return null;
+                        }
+
+                        const label =
+                            checkpoint.sideTrailEndpoint?.label ??
+                            checkpoint.title;
+                        const labelWidth = clamp(
+                            56 + label.length * 5.2,
+                            88,
+                            190,
+                        );
+                        const labelHeight = 24;
+                        const labelX =
+                            endpointSide === "left"
+                                ? endpointX - labelWidth - 12
+                                : endpointX + 12;
+                        const labelY = endpointY - labelHeight / 2;
+
+                        const onKeyDown = (event: KeyboardEvent<SVGGElement>) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                onOpenSideTrail(checkpoint);
+                            }
+                        };
+
+                        return (
+                            <g
+                                key={checkpoint.id}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => onOpenSideTrail(checkpoint)}
+                                onKeyDown={onKeyDown}
+                                className="pointer-events-auto cursor-pointer focus:outline-none"
+                                aria-label={`Open side trail for ${label}`}
+                            >
+                                <circle
+                                    cx={endpointX}
+                                    cy={endpointY}
+                                    r={7}
+                                    fill="#7c3aed"
+                                    stroke="#ffffff"
+                                    strokeWidth={2}
+                                />
+                                <circle
+                                    cx={endpointX}
+                                    cy={endpointY}
+                                    r={11}
+                                    fill="none"
+                                    stroke="#8b5cf6"
+                                    strokeOpacity={0.6}
+                                />
+                                <rect
+                                    x={labelX}
+                                    y={labelY}
+                                    width={labelWidth}
+                                    height={labelHeight}
+                                    rx={8}
+                                    fill="rgba(255,255,255,0.94)"
+                                    stroke="rgba(167,139,250,0.75)"
+                                />
+                                <text
+                                    x={labelX + labelWidth / 2}
+                                    y={endpointY + 4}
+                                    textAnchor="middle"
+                                    className="select-none fill-violet-900 text-[10px] font-medium"
+                                >
+                                    {label}
+                                </text>
+                            </g>
+                        );
+                    })}
             </motion.svg>
         </div>
     );

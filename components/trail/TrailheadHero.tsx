@@ -5,14 +5,6 @@ import { motion } from "framer-motion";
 export function TrailheadHero() {
     return (
         <section className="min-h-screen w-full flex flex-col items-center justify-center px-4 relative overflow-hidden">
-            {/* Subtle terrain background */}
-            <div
-                className="absolute inset-0 pointer-events-none -z-10"
-                style={{
-                    background: `linear-gradient(180deg, #d4e6d4 0%, #e0e8d8 50%, #e8e0c8 100%)`,
-                }}
-            />
-
             <motion.div
                 className="text-center max-w-2xl"
                 initial={{ opacity: 0, y: 24 }}
