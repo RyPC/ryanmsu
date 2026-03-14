@@ -1,13 +1,25 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback, type KeyboardEvent } from "react";
-import { motion, useSpring, useMotionValueEvent, animate } from "framer-motion";
+import {
+    useRef,
+    useEffect,
+    useState,
+    useCallback,
+    type KeyboardEvent,
+} from "react";
+import {
+    motion,
+    useSpring,
+    useMotionValue,
+    useMotionValueEvent,
+    animate,
+} from "framer-motion";
 import { type Checkpoint } from "@/data/experiences";
 import { getTrailXAtProgress, locationToScrollProgress } from "@/lib/trailPath";
 import { useTrailStore } from "@/store/trailStore";
 
 const MAIN_PATH =
-    "M 200 0 C 200 0 320 400 180 800 C 80 1200 200 1600 80 2000 C 200 2400 320 2800 200 3200 C 80 3600 200 4000 200 4000";
+    "M 400 0 C 400 0 520 400 380 800 C 280 1200 400 1600 280 2000 C 400 2400 520 2800 400 3200 C 280 3600 400 4000 400 4000";
 
 interface TrailLayerProps {
     progress: number;
@@ -25,7 +37,7 @@ const BRANCH_ANIMATION_DURATION = 6;
 const BRANCH_ANIMATION_DELAY = 0.3;
 const PIN_TRAVEL_DURATION = 2.5;
 const PIN_TRAVEL_DELAY = 1; // After branch starts drawing
-const BRANCH_DEFAULT_X_OFFSET = 132;
+const BRANCH_DEFAULT_X_OFFSET = 620;
 const BRANCH_DEFAULT_Y_OFFSET = BRANCH_VERTICAL_DISTANCE;
 
 /** Height of the visible trail "window" in SVG units. Pin stays centered in this viewport. */
@@ -98,8 +110,12 @@ export function TrailLayer({
     const pinBranchProgress = useSpring(0, { stiffness: 120, damping: 30 });
     const prevProgressRef = useRef(progress);
 
-    const effectiveProgress =
-        isSideTrailMode && branchProgress != null ? branchProgress : progress;
+    // Tracks the progress value used to position the marker on the main trail.
+    // Animates toward branchProgress when a side trail opens so the marker visibly
+    // travels to the branch point instead of teleporting.
+    const displayedMarkerProgress = useMotionValue(progress);
+    // True once the travel animation has completed and the pin can take over.
+    const [markerHasArrived, setMarkerHasArrived] = useState(false);
 
     const minViewY = TRAIL_PATH_MIN_Y - HALF_VIEW_WINDOW_HEIGHT;
     const maxViewY = TRAIL_PATH_MAX_Y - HALF_VIEW_WINDOW_HEIGHT;
@@ -121,60 +137,83 @@ export function TrailLayer({
 
     useMotionValueEvent(viewYSpring, "change", (latest) => setViewY(latest));
 
+    // Compute branch path geometry from the fixed branch attachment point.
+    // This is independent of the animated marker travel.
     useEffect(() => {
         const path = pathRef.current;
-        if (!path) return;
+        if (isSideTrailMode && branchProgress != null && clickedSide && path) {
+            const totalLength = path.getTotalLength();
+            const point = path.getPointAtLength(branchProgress * totalLength);
 
-        const totalLength = path.getTotalLength();
-        const length = effectiveProgress * totalLength;
-        const point = path.getPointAtLength(length);
-        setMarkerPoint({ x: point.x, y: point.y });
-
-        // Update pin angle: path tangent + scroll direction (forward = scrolling down)
-        const scrollForward = progress >= prevProgressRef.current;
-        prevProgressRef.current = progress;
-        if (!isSideTrailMode || !branchPath) {
-            const angle = getTangentAngle(
-                path,
-                effectiveProgress,
-                scrollForward,
-            );
-            setPinAngle(angle);
-        }
-
-        if (isSideTrailMode && branchProgress != null && clickedSide) {
             const toLeft = clickedSide === "left";
             const sign = toLeft ? -1 : 1;
             const xOffset =
                 selectedEndpoint?.xOffset ?? BRANCH_DEFAULT_X_OFFSET;
             const yOffset =
                 selectedEndpoint?.yOffset ?? BRANCH_DEFAULT_Y_OFFSET;
-            const endX = clamp(point.x + sign * xOffset, 16, 384);
-            const endY = clamp(point.y + yOffset, TRAIL_PATH_MIN_Y, TRAIL_PATH_MAX_Y);
+            const endX = clamp(point.x + sign * xOffset, 16, 784);
+            const endY = clamp(
+                point.y + yOffset,
+                TRAIL_PATH_MIN_Y,
+                TRAIL_PATH_MAX_Y,
+            );
             const deltaX = endX - point.x;
             const deltaY = endY - point.y;
 
-            // Path with three gentle bends, ending in a straight segment
-            const bend1x = point.x + deltaX * 0.42;
-            const bend1y = point.y + Math.max(deltaY * 0.24, 12);
-            const bend2x = point.x + deltaX * 0.78;
-            const bend2y = point.y + Math.max(deltaY * 0.58, 32);
-            const bend3x = point.x + deltaX * 0.94;
-            const bend3y = point.y + Math.max(deltaY * 0.84, 52);
+            // Path with two smooth curves reaching the endpoint
+            const midX = point.x + deltaX * 0.5;
+            const midY = point.y + Math.max(deltaY * 0.44, 24);
             setBranchPath(
-                `M ${point.x} ${point.y} C ${point.x + deltaX * 0.16} ${point.y + Math.max(deltaY * 0.08, 8)}, ${point.x + deltaX * 0.3} ${point.y + Math.max(deltaY * 0.14, 14)}, ${bend1x} ${bend1y} C ${point.x + deltaX * 0.5} ${point.y + Math.max(deltaY * 0.34, 24)}, ${point.x + deltaX * 0.66} ${point.y + Math.max(deltaY * 0.46, 34)}, ${bend2x} ${bend2y} C ${point.x + deltaX * 0.82} ${point.y + Math.max(deltaY * 0.66, 44)}, ${point.x + deltaX * 0.9} ${point.y + Math.max(deltaY * 0.78, 52)}, ${bend3x} ${bend3y} L ${endX} ${endY}`,
+                `M ${point.x} ${point.y} C ${point.x + deltaX * 0.14} ${point.y + Math.max(deltaY * 0.06, 6)}, ${point.x + deltaX * 0.36} ${point.y + Math.max(deltaY * 0.26, 16)}, ${midX} ${midY} C ${point.x + deltaX * 0.64} ${point.y + Math.max(deltaY * 0.62, 34)}, ${point.x + deltaX * 0.88} ${point.y + Math.max(deltaY * 0.86, 50)}, ${endX} ${endY}`,
             );
         } else {
             setBranchPath("");
             pinBranchProgress.set(0);
         }
     }, [
-        effectiveProgress,
         isSideTrailMode,
         branchProgress,
         clickedSide,
         selectedEndpoint,
+        pinBranchProgress,
     ]);
+
+    // When a side trail opens, animate the marker from its current scroll position
+    // to the branch attachment point so it visibly travels there.
+    // When the trail closes, sync immediately back to scroll progress.
+    useEffect(() => {
+        if (isSideTrailMode && branchProgress != null) {
+            setMarkerHasArrived(false);
+            const controls = animate(displayedMarkerProgress, branchProgress, {
+                duration: 0.9,
+                ease: [0.22, 1, 0.36, 1],
+                onComplete: () => setMarkerHasArrived(true),
+            });
+            return () => controls.stop();
+        } else {
+            setMarkerHasArrived(false);
+        }
+    }, [isSideTrailMode, branchProgress, displayedMarkerProgress]);
+
+    // Keep displayedMarkerProgress in sync with scroll when not in side trail mode.
+    useEffect(() => {
+        if (!isSideTrailMode) {
+            displayedMarkerProgress.set(progress);
+        }
+    }, [progress, isSideTrailMode, displayedMarkerProgress]);
+
+    // Drive markerPoint and pinAngle from the animated progress value.
+    useMotionValueEvent(displayedMarkerProgress, "change", (latest) => {
+        const path = pathRef.current;
+        if (!path) return;
+        const totalLength = path.getTotalLength();
+        const point = path.getPointAtLength(latest * totalLength);
+        setMarkerPoint({ x: point.x, y: point.y });
+        const scrollForward = latest >= prevProgressRef.current;
+        prevProgressRef.current = latest;
+        const angle = getTangentAngle(path, latest, scrollForward);
+        setPinAngle(angle);
+    });
 
     // Animate pin along the branch once path is drawn
     useEffect(() => {
@@ -225,7 +264,7 @@ export function TrailLayer({
         const svg = container.querySelector("svg");
         if (!svg) return;
 
-        const vbW = 400;
+        const vbW = 800;
         const vbH = VIEW_WINDOW_HEIGHT;
         const scale = Math.min(rect.width / vbW, rect.height / vbH);
         const contentW = vbW * scale;
@@ -252,8 +291,12 @@ export function TrailLayer({
 
     const trailOpacity = isSideTrailMode ? 1 : heroReveal;
 
+    // While the marker is traveling to the branch point, keep showing markerPoint.
+    // Only switch to the branch pin once the marker has arrived.
     const displayPinPosition =
-        isSideTrailMode && branchPath ? pinPosition : markerPoint;
+        isSideTrailMode && branchPath && markerHasArrived
+            ? pinPosition
+            : markerPoint;
 
     return (
         <div
@@ -271,7 +314,7 @@ export function TrailLayer({
                 />
             )}
             <motion.svg
-                viewBox={`0 ${viewY} 400 ${VIEW_WINDOW_HEIGHT}`}
+                viewBox={`0 ${viewY} 800 ${VIEW_WINDOW_HEIGHT}`}
                 preserveAspectRatio="xMidYMid meet"
                 className="absolute inset-0 w-full h-full"
             >
@@ -409,7 +452,8 @@ export function TrailLayer({
                         const path = pathRef.current;
                         const fallbackStartX =
                             getTrailXAtProgress(branchStartProgress);
-                        const fallbackStartY = branchStartProgress * TRAIL_PATH_MAX_Y;
+                        const fallbackStartY =
+                            branchStartProgress * TRAIL_PATH_MAX_Y;
                         let startX = fallbackStartX;
                         let startY = fallbackStartY;
 
@@ -426,7 +470,7 @@ export function TrailLayer({
                         const endpointX = clamp(
                             startX + sideSign * xOffset,
                             16,
-                            384,
+                            784,
                         );
                         const endpointY = clamp(
                             startY + yOffset,
@@ -455,7 +499,9 @@ export function TrailLayer({
                                 : endpointX + 12;
                         const labelY = endpointY - labelHeight / 2;
 
-                        const onKeyDown = (event: KeyboardEvent<SVGGElement>) => {
+                        const onKeyDown = (
+                            event: KeyboardEvent<SVGGElement>,
+                        ) => {
                             if (event.key === "Enter" || event.key === " ") {
                                 event.preventDefault();
                                 onOpenSideTrail(checkpoint);

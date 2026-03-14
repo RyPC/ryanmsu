@@ -61,8 +61,8 @@ export const experiences: Checkpoint[] = [
     sideTrailId: 'first-projects',
     sideTrailEndpoint: {
       side: 'left',
-      xOffset: 140,
-      yOffset: 92,
+      xOffset: 632,
+      yOffset: 95,
     },
   },
   {
@@ -90,8 +90,8 @@ export const experiences: Checkpoint[] = [
     sideTrailId: 'biorobotics',
     sideTrailEndpoint: {
       side: 'left',
-      xOffset: 132,
-      yOffset: 86,
+      xOffset: 592,
+      yOffset: 100,
     },
     dates: 'June 2024 – Oct. 2024',
   },
@@ -109,8 +109,8 @@ export const experiences: Checkpoint[] = [
     sideTrailId: 'commit-the-change',
     sideTrailEndpoint: {
       side: 'right',
-      xOffset: 136,
-      yOffset: 84,
+      xOffset: 672,
+      yOffset: 88,
     },
     url: 'https://ctc-uci.com',
     dates: 'Oct. 2024 – Present',
@@ -129,8 +129,8 @@ export const experiences: Checkpoint[] = [
     sideTrailId: 'veeva',
     sideTrailEndpoint: {
       side: 'left',
-      xOffset: 128,
-      yOffset: 84,
+      xOffset: 648,
+      yOffset: 105,
     },
     url: 'https://www.veeva.com',
     dates: 'June 2025 – Sept. 2025',
@@ -149,8 +149,8 @@ export const experiences: Checkpoint[] = [
     sideTrailId: 'gowith',
     sideTrailEndpoint: {
       side: 'right',
-      xOffset: 144,
-      yOffset: 96,
+      xOffset: 700,
+      yOffset: 92,
     },
     url: 'https://gowithapartner.com',
     dates: 'June 2025 – Present',
@@ -169,8 +169,8 @@ export const experiences: Checkpoint[] = [
     sideTrailId: 'anthropology-research',
     sideTrailEndpoint: {
       side: 'left',
-      xOffset: 130,
-      yOffset: 88,
+      xOffset: 608,
+      yOffset: 98,
     },
     dates: 'Feb. 2025 – Present',
   },

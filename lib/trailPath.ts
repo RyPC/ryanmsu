@@ -1,21 +1,21 @@
 import type { Checkpoint } from "@/data/experiences";
 
 /**
- * X position (0-400) of the trail path at scroll progress t (0-1).
- * Path: M 200 0 C 200 0 320 400 180 800 C 80 1200 200 1600 80 2000 C 200 2400 320 2800 200 3200 C 80 3600 200 4000 200 4000
+ * X position (0-800) of the trail path at scroll progress t (0-1).
+ * Path: M 400 0 C 400 0 520 400 380 800 C 280 1200 400 1600 280 2000 C 400 2400 520 2800 400 3200 C 280 3600 400 4000 400 4000
  * Four segments: seg1 curves right then left, seg2 left, seg3 right, seg4 dips left and back.
  * Keyframes derived from path structure (bezier control points and approximate arc-length distribution).
  */
 const TRAIL_X_KEYFRAMES: [number, number][] = [
-  [0, 200],
-  [0.08, 280],
-  [0.2, 180],
-  [0.35, 100],
-  [0.5, 80],
-  [0.6, 260],
-  [0.72, 200],
-  [0.85, 120],
-  [1, 200],
+  [0, 400],
+  [0.08, 480],
+  [0.2, 380],
+  [0.35, 300],
+  [0.5, 280],
+  [0.6, 460],
+  [0.72, 400],
+  [0.85, 320],
+  [1, 400],
 ]
 
 function lerp(a: number, b: number, t: number) {
@@ -35,9 +35,9 @@ export function getTrailXAtProgress(progress: number): number {
   return TRAIL_X_KEYFRAMES[TRAIL_X_KEYFRAMES.length - 1][1]
 }
 
-/** Trail SVG is 400 units wide; returns fraction 0-1 for positioning */
+/** Trail SVG is 800 units wide; returns fraction 0-1 for positioning */
 export function getTrailXFraction(progress: number): number {
-  return getTrailXAtProgress(progress) / 400
+  return getTrailXAtProgress(progress) / 800
 }
 
 export const TRAIL_CONTENT_HEIGHT = 4000
@@ -91,3 +91,4 @@ export function locationToScrollProgress(
   const scrollTop = heroHeight + locationOnTrail * TRAIL_CONTENT_HEIGHT
   return Math.min(1, scrollTop / totalHeight)
 }
+

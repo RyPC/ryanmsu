@@ -5,13 +5,18 @@ import type { Checkpoint as CheckpointType } from '@/data/experiences'
 import { TRAIL_CONTENT_HEIGHT } from '@/lib/trailPath'
 
 /** Trail zone is centered; cards go left/right of it. Left/right bounds as % of content width. */
-const TRAIL_ZONE_LEFT_PCT = 36
-const TRAIL_ZONE_RIGHT_PCT = 64
+const TRAIL_ZONE_LEFT_PCT = 30
+const TRAIL_ZONE_RIGHT_PCT = 70
 const CARD_TRAIL_GAP = 24
 
 interface CheckpointProps {
   checkpoint: CheckpointType
   index: number
+  /** Viewport height in px — used to vertically align card with the trail marker */
+  heroHeight: number
+  /** Card has entered the viewport — show translucent approaching state */
+  isInViewport: boolean
+  /** Marker has reached the card — show fully opaque */
   isVisible: boolean
   onOpenSideTrail: (checkpoint: CheckpointType) => void
   exitVariants?: Variants
@@ -55,7 +60,7 @@ const iconPaths: Record<string, string> = {
     'M13 10V3L4 14h7v7l9-11h-7z',
 }
 
-export function Checkpoint({ checkpoint, index, isVisible, onOpenSideTrail, exitVariants }: CheckpointProps) {
+export function Checkpoint({ checkpoint, index, heroHeight, isInViewport, isVisible, onOpenSideTrail, exitVariants }: CheckpointProps) {
   const sideOffset = index % 2 === 0 ? 'left' : 'right'
   const styles = variantStyles[checkpoint.variant]
   const isEducation = checkpoint.variant === 'education'
@@ -73,15 +78,18 @@ export function Checkpoint({ checkpoint, index, isVisible, onOpenSideTrail, exit
         isEducation ? 'w-96 max-w-[calc(100vw-2rem)]' : 'w-72 max-w-[calc(100vw-2rem)]'
       }`}
       style={{
-        top: `${checkpoint.locationOnTrail * TRAIL_CONTENT_HEIGHT}px`,
+        top: `${checkpoint.locationOnTrail * TRAIL_CONTENT_HEIGHT + heroHeight / 2}px`,
         transform: 'translateY(-50%)',
+        pointerEvents: isInViewport ? undefined : 'none',
         ...positionStyle,
       }}
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={
         isVisible
           ? { opacity: 1, y: 0, scale: 1 }
-          : { opacity: 0.3, y: 10, scale: 0.98 }
+          : isInViewport
+            ? { opacity: 0.3, y: 10, scale: 0.98 }
+            : { opacity: 0, y: 20, scale: 0.95 }
       }
       transition={{ duration: 0.4, ease: 'easeOut' }}
     >

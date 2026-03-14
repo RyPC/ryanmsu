@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { TrailLayer } from "@/components/trail/TrailLayer";
+import { TopographyBackground } from "@/components/trail/TopographyBackground";
 import { TrailheadHero } from "@/components/trail/TrailheadHero";
 import { Checkpoint } from "@/components/trail/Checkpoint";
 import { ProgressIndicator } from "@/components/trail/ProgressIndicator";
@@ -14,6 +15,7 @@ import { experiences, type Checkpoint as CheckpointType } from "@/data/experienc
 import {
     getTrailMetricsFromExperiences,
     locationToScrollProgress,
+    TRAIL_CONTENT_HEIGHT,
 } from "@/lib/trailPath";
 
 /** Extra gap between nav and content so cards don't overlap */
@@ -72,7 +74,7 @@ export function TrailViewTransition() {
         () => getTrailMetricsFromExperiences(experiences),
         [],
     );
-    const { contentHeight, progressHeight } = trailMetrics;
+    const { progressHeight } = trailMetrics;
     const trailScrollHeightPx = heroHeight + progressHeight;
 
     const showTrailContent = !activeSideTrailId || trailContentVisible;
@@ -163,6 +165,9 @@ export function TrailViewTransition() {
                 activeSideTrailId ? "overflow-visible" : "overflow-hidden"
             }`}
         >
+            {/* Full-page terrain background — sits behind all other layers */}
+            <TopographyBackground progress={progress} />
+
             {/* Section nav - fixed left, overlays scroll content; background is shared via full-width scroll */}
             <SectionNav
                 scrollContainerRef={scrollContainerRef}
@@ -178,7 +183,7 @@ export function TrailViewTransition() {
             >
                 <div
                     className="h-full flex-shrink-0"
-                    style={{ width: `${TRAIL_ZONE_WIDTH_PCT}%`, maxWidth: 280 }}
+                    style={{ width: `${TRAIL_ZONE_WIDTH_PCT}%`, maxWidth: 560 }}
                 >
                     <TrailLayer
                         progress={progress}
@@ -237,14 +242,6 @@ export function TrailViewTransition() {
                             minHeight: `calc(100vh + ${trailScrollHeightPx}px)`,
                         }}
                     >
-                        {/* Shared background - fills wrapper, full scroll height */}
-                        <div
-                            className="absolute inset-0 pointer-events-none -z-10"
-                            style={{
-                                background: `linear-gradient(to bottom, 
-                                    #d4e6d4 0%, #e8e0c8 25%, #d4d8e0 50%, #b8c8d8 75%, #a0b4c8 100%)`,
-                            }}
-                        />
                         <motion.div
                             variants={blowOffItem(0, blowDirection)}
                             style={{ paddingLeft: SECTION_NAV_WIDTH + CONTENT_NAV_GAP }}
@@ -262,24 +259,20 @@ export function TrailViewTransition() {
                         <ProgressIndicator progress={progress} />
                         {checkpointItems.map((checkpoint, index) => {
                                 const totalHeight = heroHeight + progressHeight;
-                                const thresholdLow =
-                                    (checkpoint.locationOnTrail *
-                                        contentHeight +
-                                        0.125 * heroHeight) /
-                                    totalHeight;
-                                const thresholdHigh =
-                                    (checkpoint.locationOnTrail *
-                                        contentHeight +
-                                        0.875 * heroHeight) /
-                                    totalHeight;
-                                const isVisible =
-                                    progress >= thresholdLow &&
-                                    progress <= thresholdHigh;
+                                const cardY = checkpoint.locationOnTrail * TRAIL_CONTENT_HEIGHT;
+                                // Card enters viewport bottom (card offset by heroHeight/2)
+                                const enterThreshold = (cardY + heroHeight / 2) / totalHeight;
+                                // Card is at 75% from top — visually in the lower-center
+                                const revealThreshold = (cardY + heroHeight * 0.75) / totalHeight;
+                                const isInViewport = progress >= enterThreshold;
+                                const isVisible = progress >= revealThreshold;
                                 return (
                                     <Checkpoint
                                         key={checkpoint.id}
                                         checkpoint={checkpoint}
                                         index={index}
+                                        heroHeight={heroHeight}
+                                        isInViewport={isInViewport}
                                         isVisible={isVisible}
                                         onOpenSideTrail={handleOpenSideTrail}
                                         exitVariants={blowOffItem(

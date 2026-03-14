@@ -9,6 +9,33 @@ import { SideTrailContent } from "./SideTrailContent";
 const MODAL_ABOVE_OFFSET = 24; // gap between branch point and modal bottom
 const EDGE_PADDING = 40; // min gap from viewport left/right edges
 
+const modalVariants = {
+    hidden: {
+        opacity: 0,
+        scale: 0.88,
+        y: 28,
+    },
+    visible: {
+        opacity: 1,
+        scale: 1,
+        y: 0,
+        transition: {
+            duration: 0.55,
+            delay: 3.6,
+            ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+        },
+    },
+    gone: {
+        opacity: 0,
+        scale: 0.9,
+        y: 20,
+        transition: {
+            duration: 0.3,
+            ease: [0.55, 0, 0.78, 0] as [number, number, number, number],
+        },
+    },
+};
+
 function useViewportSize() {
     const [size, setSize] = useState(() =>
         typeof window !== "undefined"
@@ -73,6 +100,7 @@ export function SideTrailView() {
                 className="pointer-events-auto absolute z-30 max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl"
                 style={{
                     width: hasPosition ? modalWidth : undefined,
+                    transformOrigin: "50% 100%",
                     ...(hasPosition
                         ? {
                               left: centerX,
@@ -88,22 +116,10 @@ export function SideTrailView() {
                               width: "min(95vw, 840px)",
                           }),
                 }}
-                initial={{ opacity: 0, scale: 0.9, y: 8 }}
-                animate={{
-                    opacity: 1,
-                    scale: 1,
-                    y: 0,
-                    transition: {
-                        duration: 0.5,
-                        delay: 3.6,
-                        ease: [0.22, 1, 0.36, 1],
-                    },
-                }}
-                exit={{
-                    opacity: 0,
-                    scale: 0.95,
-                    transition: { duration: 0.25 },
-                }}
+                variants={modalVariants}
+                initial="hidden"
+                animate="visible"
+                exit="gone"
             >
                 <div
                     className="max-h-[min(90vh,1000px)] overflow-y-auto bg-white/98 backdrop-blur-md p-6 border border-white/80"
