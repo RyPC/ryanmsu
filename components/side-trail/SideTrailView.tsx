@@ -42,7 +42,8 @@ const modalVariants = {
 export function SideTrailView() {
     const { width: vw } = useViewportSize();
     const activeSideTrailId = useTrailStore((s) => s.activeSideTrailId);
-    const setActiveSideTrail = useTrailStore((s) => s.setActiveSideTrail);
+    const isReturning = useTrailStore((s) => s.isReturning);
+    const beginReturnToTrail = useTrailStore((s) => s.beginReturnToTrail);
     const branchEndScreenPosition = useTrailStore((s) => s.branchEndScreenPosition);
     const activeBranchLength = useTrailStore((s) => s.activeBranchLength);
 
@@ -70,7 +71,8 @@ export function SideTrailView() {
     return (
         <div className="fixed inset-0 pointer-events-none">
             <button
-                onClick={() => setActiveSideTrail(null)}
+                onClick={isReturning ? undefined : beginReturnToTrail}
+                disabled={isReturning}
                 className="absolute inset-0 bg-black/20 pointer-events-auto cursor-default"
                 aria-label="Close modal"
             />
@@ -95,14 +97,15 @@ export function SideTrailView() {
                 custom={pinArrivalDelay}
                 variants={modalVariants}
                 initial="hidden"
-                animate="visible"
+                animate={isReturning ? "gone" : "visible"}
                 exit="gone"
             >
                 <div className="max-h-[min(90vh,1000px)] overflow-y-auto bg-white/98 backdrop-blur-md p-6 border border-white/80">
                     <h2 className="text-2xl font-bold text-gray-900 mb-3">{content.title}</h2>
                     <SideTrailContent content={content} />
                     <motion.button
-                        onClick={() => setActiveSideTrail(null)}
+                        onClick={isReturning ? undefined : beginReturnToTrail}
+                        disabled={isReturning}
                         className="mt-6 w-full py-2.5 px-4 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

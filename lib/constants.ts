@@ -2,6 +2,7 @@ export const BRANCH_ANIMATION_DURATION = 0.5
 export const BRANCH_ANIMATION_DELAY = 0.3
 export const PIN_TRAVEL_DELAY = 0.6
 export const PIN_TRAVEL_DURATION_BASE = 1.6
+export const PIN_RETURN_DURATION = 1.3
 export const BRANCH_LENGTH_MIN = 0.5
 export const BRANCH_LENGTH_MAX = 2.0
 export const BRANCH_DEFAULT_X_OFFSET = 620

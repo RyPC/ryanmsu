@@ -61,6 +61,7 @@ export function TrailViewTransition() {
     const clickedSide = useTrailStore((s) => s.clickedSide);
     const returnScrollProgress = useTrailStore((s) => s.returnScrollProgress);
     const setActiveSideTrail = useTrailStore((s) => s.setActiveSideTrail);
+    const handleReturnComplete = useCallback(() => setActiveSideTrail(null), [setActiveSideTrail]);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [heroHeight, setHeroHeight] = useState(
         typeof window !== "undefined" ? window.innerHeight : 800,
@@ -107,9 +108,13 @@ export function TrailViewTransition() {
                 scrollRestoreRef.current;
             if (p != null) {
                 const scrollTop = p * (h + progressHeight);
+                // Set synchronously; direct scrollTop assignment bypasses CSS scroll-behavior.
+                el.scrollTop = scrollTop;
+                // Repeat after two rAFs in case browser layout wasn't ready on first assignment.
+                // Use direct scrollTop (not scrollTo) so scroll-smooth CSS cannot animate it.
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
-                        el.scrollTo({ top: scrollTop, behavior: "auto" });
+                        el.scrollTop = scrollTop;
                     });
                 });
             }
@@ -189,6 +194,7 @@ export function TrailViewTransition() {
                         heroHeight={heroHeight}
                         trailProgressHeight={progressHeight}
                         onOpenSideTrail={handleOpenSideTrail}
+                        onReturnComplete={handleReturnComplete}
                     />
                 </div>
             </div>
@@ -198,7 +204,7 @@ export function TrailViewTransition() {
                 <motion.div
                     key="trail-content"
                     ref={setScrollContainerRef}
-                    className={`h-screen overflow-y-auto scroll-smooth relative z-10 ${
+                    className={`h-screen overflow-y-auto relative z-10 ${
                         activeSideTrailId
                             ? "pointer-events-none overflow-x-visible"
                             : "overflow-x-hidden"

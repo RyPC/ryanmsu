@@ -28,6 +28,7 @@ interface TrailLayerProps {
     heroHeight: number;
     trailProgressHeight: number;
     onOpenSideTrail: (checkpoint: Checkpoint) => void;
+    onReturnComplete?: () => void;
 }
 
 export function TrailLayer({
@@ -38,6 +39,7 @@ export function TrailLayer({
     heroHeight,
     trailProgressHeight,
     onOpenSideTrail,
+    onReturnComplete,
 }: TrailLayerProps) {
     const pathRef = useRef<SVGPathElement>(null);
     const branchPathRef = useRef<SVGPathElement>(null);
@@ -49,6 +51,7 @@ export function TrailLayer({
         containerRef,
         progress,
         isSideTrailMode,
+        onReturnComplete,
     });
 
     const trailOpacity = isSideTrailMode ? 1 : heroReveal;
@@ -112,11 +115,7 @@ export function TrailLayer({
                         strokeLinejoin="round"
                         initial={{ pathLength: 0 }}
                         animate={{ pathLength: 1 }}
-                        transition={{
-                            duration: BRANCH_ANIMATION_DURATION,
-                            delay: BRANCH_ANIMATION_DELAY,
-                            ease: [0.22, 1, 0.36, 1],
-                        }}
+                        transition={{ duration: BRANCH_ANIMATION_DURATION, delay: BRANCH_ANIMATION_DELAY, ease: [0.22, 1, 0.36, 1] }}
                     />
                 )}
                 <motion.g

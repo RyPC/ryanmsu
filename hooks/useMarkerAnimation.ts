@@ -10,6 +10,7 @@ import {
   BRANCH_LENGTH_MAX,
   PIN_TRAVEL_DELAY,
   PIN_TRAVEL_DURATION_BASE,
+  PIN_RETURN_DURATION,
   VIEW_WINDOW_HEIGHT,
   TRAIL_PATH_MIN_Y,
   TRAIL_PATH_MAX_Y,
@@ -48,6 +49,7 @@ interface UseMarkerAnimationProps {
   containerRef: React.RefObject<HTMLDivElement>
   progress: number
   isSideTrailMode: boolean
+  onReturnComplete?: () => void
 }
 
 export interface MarkerAnimationState {
@@ -56,6 +58,7 @@ export interface MarkerAnimationState {
   pinAngle: number
   viewY: number
   displayPinPosition: { x: number; y: number }
+  isReturning: boolean
 }
 
 export function useMarkerAnimation({
@@ -64,11 +67,14 @@ export function useMarkerAnimation({
   containerRef,
   progress,
   isSideTrailMode,
+  onReturnComplete,
 }: UseMarkerAnimationProps): MarkerAnimationState {
   const branchProgress = useTrailStore((s) => s.branchProgress)
   const clickedSide = useTrailStore((s) => s.clickedSide)
   const selectedEndpoint = useTrailStore((s) => s.selectedEndpoint)
   const activeBranchLength = useTrailStore((s) => s.activeBranchLength)
+  const isReturning = useTrailStore((s) => s.isReturning)
+  const returnScrollProgress = useTrailStore((s) => s.returnScrollProgress)
   const setBranchEndScreenPosition = useTrailStore((s) => s.setBranchEndScreenPosition)
 
   const clampedBranchLength = clamp(activeBranchLength, BRANCH_LENGTH_MIN, BRANCH_LENGTH_MAX)
@@ -80,6 +86,8 @@ export function useMarkerAnimation({
   const [pinAngle, setPinAngle] = useState(0)
   const pinBranchProgress = useSpring(0, { stiffness: 120, damping: 30 })
   const prevProgressRef = useRef(progress)
+  const isReturningRef = useRef(isReturning)
+  isReturningRef.current = isReturning
 
   // Separate motion value so we can animate the marker to the branch point
   // before the pin takes over, rather than teleporting.
@@ -139,9 +147,13 @@ export function useMarkerAnimation({
 
   useEffect(() => {
     if (!isSideTrailMode) {
+      // Skip progress=0 while scroll is being restored after returning from a side trail.
+      // The scroll container remounts at 0 then jumps to the saved position after 2 rAFs,
+      // which would teleport the marker to the top and spring it back down.
+      if (progress === 0 && returnScrollProgress != null && returnScrollProgress > 0) return
       displayedMarkerProgress.set(progress)
     }
-  }, [progress, isSideTrailMode, displayedMarkerProgress])
+  }, [progress, isSideTrailMode, returnScrollProgress, displayedMarkerProgress])
 
   useMotionValueEvent(displayedMarkerProgress, 'change', (latest) => {
     const path = pathRef.current
@@ -154,7 +166,7 @@ export function useMarkerAnimation({
   })
 
   useEffect(() => {
-    if (isSideTrailMode && branchPath) {
+    if (isSideTrailMode && branchPath && !isReturning) {
       const controls = animate(pinBranchProgress, 1, {
         duration: pinTravelDuration,
         delay: PIN_TRAVEL_DELAY,
@@ -162,14 +174,24 @@ export function useMarkerAnimation({
       })
       return () => controls.stop()
     }
-  }, [isSideTrailMode, branchPath, pinBranchProgress, pinTravelDuration])
+  }, [isSideTrailMode, branchPath, isReturning, pinBranchProgress, pinTravelDuration])
+
+  useEffect(() => {
+    if (!isReturning) return
+    const controls = animate(pinBranchProgress, 0, {
+      duration: PIN_RETURN_DURATION,
+      ease: [0.22, 1, 0.36, 1],
+      onComplete: onReturnComplete,
+    })
+    return () => controls.stop()
+  }, [isReturning, pinBranchProgress, onReturnComplete])
 
   useMotionValueEvent(pinBranchProgress, 'change', (latest) => {
     const branchEl = branchPathRef.current
     if (isSideTrailMode && branchPath && branchEl) {
       const pt = getPointOnPath(branchEl, latest)
       if (pt) setPinPosition(pt)
-      setPinAngle(getTangentAngle(branchEl, latest, true))
+      setPinAngle(getTangentAngle(branchEl, latest, !isReturningRef.current))
     } else {
       setPinPosition(markerPoint)
     }
@@ -217,5 +239,5 @@ export function useMarkerAnimation({
   const displayPinPosition =
     isSideTrailMode && branchPath && markerHasArrived ? pinPosition : markerPoint
 
-  return { branchPath, markerPoint, pinAngle, viewY, displayPinPosition }
+  return { branchPath, markerPoint, pinAngle, viewY, displayPinPosition, isReturning }
 }
