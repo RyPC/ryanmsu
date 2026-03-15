@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { type Checkpoint } from "@/data/experiences";
 import { useMarkerAnimation } from "@/hooks/useMarkerAnimation";
 import { TrailEndpointDots } from "./TrailEndpointDots";
+import { LandmarkDots } from "./LandmarkDots";
 import {
     BRANCH_ANIMATION_DURATION,
     BRANCH_ANIMATION_DELAY,
@@ -25,6 +26,7 @@ interface TrailLayerProps {
     heroReveal: number;
     isSideTrailMode: boolean;
     sideTrailCheckpoints: Checkpoint[];
+    landmarkCheckpoints: Checkpoint[];
     heroHeight: number;
     trailProgressHeight: number;
     onOpenSideTrail: (checkpoint: Checkpoint) => void;
@@ -36,6 +38,7 @@ export function TrailLayer({
     heroReveal,
     isSideTrailMode,
     sideTrailCheckpoints,
+    landmarkCheckpoints,
     heroHeight,
     trailProgressHeight,
     onOpenSideTrail,
@@ -144,14 +147,24 @@ export function TrailLayer({
                     />
                 </motion.g>
                 {!isSideTrailMode && (
-                    <TrailEndpointDots
-                        checkpoints={sideTrailCheckpoints}
-                        pathRef={pathRef}
-                        viewY={viewY}
-                        heroHeight={heroHeight}
-                        trailProgressHeight={trailProgressHeight}
-                        onOpenSideTrail={onOpenSideTrail}
-                    />
+                    <>
+                        <TrailEndpointDots
+                            checkpoints={sideTrailCheckpoints}
+                            pathRef={pathRef}
+                            viewY={viewY}
+                            heroHeight={heroHeight}
+                            trailProgressHeight={trailProgressHeight}
+                            onOpenSideTrail={onOpenSideTrail}
+                        />
+                        <LandmarkDots
+                            checkpoints={landmarkCheckpoints}
+                            progress={progress}
+                            pathRef={pathRef}
+                            viewY={viewY}
+                            heroHeight={heroHeight}
+                            trailProgressHeight={trailProgressHeight}
+                        />
+                    </>
                 )}
             </motion.svg>
         </div>

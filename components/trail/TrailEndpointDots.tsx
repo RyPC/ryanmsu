@@ -69,8 +69,8 @@ export function TrailEndpointDots({
         }
 
         const label = checkpoint.sideTrailEndpoint?.label ?? checkpoint.title
-        const labelWidth = clamp(56 + label.length * 5.2, 88, 190)
-        const labelHeight = 24
+        const labelWidth = clamp(64 + label.length * 6.8, 110, 220)
+        const labelHeight = 30
         const labelX = endpointSide === 'left' ? endpointX - labelWidth - 12 : endpointX + 12
         const labelY = endpointY - labelHeight / 2
 
@@ -104,9 +104,9 @@ export function TrailEndpointDots({
             />
             <text
               x={labelX + labelWidth / 2}
-              y={endpointY + 4}
+              y={endpointY + 5}
               textAnchor="middle"
-              className="select-none fill-violet-900 text-[10px] font-medium"
+              className="select-none fill-violet-900 text-[13px] font-medium"
             >
               {label}
             </text>

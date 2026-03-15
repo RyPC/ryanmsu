@@ -52,6 +52,7 @@ export function SectionNav({
     id: exp.id,
     title: exp.type === "trailhead" ? "Trailhead" : exp.title,
     locationOnTrail: exp.locationOnTrail,
+    isLandmark: exp.isLandmark ?? false,
   }));
 
   const handleClick = (locationOnTrail: number) => {
@@ -96,8 +97,14 @@ export function SectionNav({
             <motion.button
               key={item.id}
               onClick={() => handleClick(item.locationOnTrail)}
-              className={`text-left py-1.5 px-2 rounded-md text-sm font-medium transition-colors w-full cursor-pointer border-l-2 -ml-px ${
-                isActive ? "border-amber-700/70" : "border-transparent"
+              className={`text-left py-1.5 px-2 rounded-md text-sm transition-colors w-full cursor-pointer border-l-2 -ml-px ${
+                item.isLandmark
+                  ? isActive
+                    ? "border-orange-500 font-semibold"
+                    : "border-transparent font-medium"
+                  : isActive
+                    ? "border-amber-700/70 font-medium"
+                    : "border-transparent font-medium"
               }`}
               animate={{
                 opacity: isActive ? 1 : 0.35,
@@ -107,11 +114,18 @@ export function SectionNav({
             >
               <span
                 className={
-                  isActive
-                    ? "text-amber-900/95"
-                    : "text-amber-900/60 hover:text-amber-900/80"
+                  item.isLandmark
+                    ? isActive
+                      ? "text-orange-600"
+                      : "text-orange-500/70"
+                    : isActive
+                      ? "text-amber-900/95"
+                      : "text-amber-900/60 hover:text-amber-900/80"
                 }
               >
+                {item.isLandmark && (
+                  <span className="mr-1 text-[10px]">◆</span>
+                )}
                 {item.title}
               </span>
             </motion.button>

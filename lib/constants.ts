@@ -8,6 +8,8 @@ export const BRANCH_LENGTH_MAX = 2.0
 export const BRANCH_DEFAULT_X_OFFSET = 620
 export const BRANCH_DEFAULT_Y_OFFSET = 83
 
+export const LANDMARK_OPEN_THRESHOLD = 0.06
+
 export const TRAIL_SVG_WIDTH = 800
 export const VIEW_WINDOW_HEIGHT = 1400
 export const TRAIL_PATH_MIN_Y = 0

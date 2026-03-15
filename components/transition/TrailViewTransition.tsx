@@ -17,6 +17,7 @@ import {
     locationToScrollProgress,
     TRAIL_CONTENT_HEIGHT,
 } from "@/lib/trailPath";
+import { LANDMARK_OPEN_THRESHOLD } from "@/lib/constants";
 
 const CONTENT_NAV_GAP = 24;
 const TRAIL_ZONE_WIDTH_PCT = 28;
@@ -128,6 +129,7 @@ export function TrailViewTransition() {
     const sideTrailCheckpoints = checkpointItems.filter(
         (c) => c.sideTrail && c.sideTrailId,
     );
+    const landmarkCheckpoints = checkpointItems.filter((c) => c.isLandmark);
 
     const getCheckpointCardSide = useCallback((checkpointId: string) => {
         const checkpointIndex = checkpointItems.findIndex(
@@ -191,6 +193,7 @@ export function TrailViewTransition() {
                         heroReveal={heroReveal}
                         isSideTrailMode={isSideTrailMode}
                         sideTrailCheckpoints={sideTrailCheckpoints}
+                        landmarkCheckpoints={landmarkCheckpoints}
                         heroHeight={heroHeight}
                         trailProgressHeight={progressHeight}
                         onOpenSideTrail={handleOpenSideTrail}
@@ -252,21 +255,34 @@ export function TrailViewTransition() {
                             variants={blowOffTrailArea}
                         >
                         <ProgressIndicator progress={progress} />
-                        {checkpointItems.map((checkpoint, index) => {
+                        {checkpointItems.filter((c) => c.isLandmark).map((checkpoint, index) => {
+                                const isLandmark = checkpoint.isLandmark ?? false;
                                 const totalHeight = heroHeight + progressHeight;
                                 const cardY = checkpoint.locationOnTrail * TRAIL_CONTENT_HEIGHT;
                                 const enterThreshold = (cardY + heroHeight / 2) / totalHeight;
                                 const revealThreshold = (cardY + heroHeight * 0.75) / totalHeight;
                                 const isInViewport = progress >= enterThreshold;
                                 const isVisible = progress >= revealThreshold;
+
+                                const isNearLandmark = isLandmark
+                                    ? Math.abs(
+                                          progress -
+                                              locationToScrollProgress(
+                                                  checkpoint.locationOnTrail,
+                                                  heroHeight,
+                                                  progressHeight,
+                                              ),
+                                      ) < LANDMARK_OPEN_THRESHOLD
+                                    : false;
+
                                 return (
                                     <Checkpoint
                                         key={checkpoint.id}
                                         checkpoint={checkpoint}
                                         index={index}
                                         heroHeight={heroHeight}
-                                        isInViewport={isInViewport}
-                                        isVisible={isVisible}
+                                        isInViewport={isLandmark ? true : isInViewport}
+                                        isVisible={isLandmark ? isNearLandmark : isVisible}
                                         onOpenSideTrail={handleOpenSideTrail}
                                         exitVariants={blowOffItem(
                                             index + 1,

@@ -39,6 +39,11 @@ export interface Checkpoint {
   branchLength?: number
   url?: string
   dates?: string
+  /**
+   * When true, this checkpoint is a landmark — rendered directly on the trail
+   * with a glowing orange dot and a binary-snap blurb card. No branch or modal.
+   */
+  isLandmark?: boolean
 }
 
 export const experiences: Checkpoint[] = [
@@ -82,6 +87,7 @@ export const experiences: Checkpoint[] = [
     locationOnTrail: 0.25,
     icon: 'peak',
     sideTrail: false,
+    isLandmark: true,
   },
   {
     id: 'biorobotics',

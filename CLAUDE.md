@@ -131,33 +131,33 @@ There is no database, no backend API, and no authentication layer.
 
 1. **Read before writing.** Read every file you plan to touch before modifying it.
 2. **Follow existing patterns first.** This codebase has strong conventions — trail metaphor
-   naming, Framer Motion variant objects, Zustand actions — do not introduce new patterns
+  naming, Framer Motion variant objects, Zustand actions — do not introduce new patterns
    unless explicitly asked.
 3. **Minimal diffs.** Make the smallest change that satisfies the requirement. Do not
-   restructure unrelated code.
+  restructure unrelated code.
 4. **Do not introduce new dependencies** without explicit approval. Every package must earn
-   its place; the dependency list is intentionally lean.
+  its place; the dependency list is intentionally lean.
 5. **TypeScript strict mode is on.** All types must be explicit. Do not use `any`.
 6. **Tailwind-first styling.** Use Tailwind utility classes for layout/spacing/typography.
-   Use CSS custom properties (`var(--color-accent)`, etc.) for theme colors — do not
+  Use CSS custom properties (`var(--color-accent)`, etc.) for theme colors — do not
    hard-code hex values.
 7. **Framer Motion for all animations.** Do not use CSS transitions or `@keyframes` for
-   interactive animations. Define motion values as `variants` objects outside the component
+  interactive animations. Define motion values as `variants` objects outside the component
    body when possible.
 8. **Keep the trail metaphor intact.** Variable names, component names, and data field names
-   follow the hiking metaphor (`checkpoint`, `sideTrail`, `trailhead`, `progress`,
+  follow the hiking metaphor (`checkpoint`, `sideTrail`, `trailhead`, `progress`,
    `locationOnTrail`, `branch`, `marker`, `summit`). Preserve this language.
 9. **Client components require `"use client"`.** Every component that uses hooks, Framer
-   Motion, or browser APIs must have `"use client"` as its first line.
-10. **`data/` is the single source of truth.** All content (experience text, tech stacks,
-    side trail details) lives in `data/experiences.ts` and `data/sideTrails.ts`. Content
+  Motion, or browser APIs must have `"use client"` as its first line.
+10. `**data/` is the single source of truth.** All content (experience text, tech stacks,
+  side trail details) lives in `data/experiences.ts` and `data/sideTrails.ts`. Content
     changes go only there.
 11. **Do not modify `src/` or `dist/`.** Both are vestigial directories from a prior Vite
-    build. They should eventually be deleted but are currently harmless — leave them alone.
+  build. They should eventually be deleted but are currently harmless — leave them alone.
 12. **Do not change the `SECTION_NAV_WIDTH` export** from `SectionNav.tsx` without also
-    updating every reference to it in `TrailViewTransition.tsx`.
+  updating every reference to it in `TrailViewTransition.tsx`.
 13. **Branch animation timing lives in `lib/constants.ts`** — `BRANCH_ANIMATION_DELAY`,
-    `PIN_TRAVEL_DELAY`, `PIN_TRAVEL_DURATION_BASE`, etc. Both `useMarkerAnimation` and
+  `PIN_TRAVEL_DELAY`, `PIN_TRAVEL_DURATION_BASE`, etc. Both `useMarkerAnimation` and
     `SideTrailView` import from there. Never duplicate these values.
 
 ---
@@ -172,30 +172,32 @@ There are currently **no automated tests** in this repository. Until tests are a
 
 ### Manual verification checklist
 
-- [ ] Scroll smoothly from hero to summit; marker tracks correctly
-- [ ] All 9 checkpoints appear at the right scroll positions
-- [ ] "Side Trail" / "Explore" buttons open the correct modal
-- [ ] Branch path animates from the correct trail point
-- [ ] Modal appears near the branch endpoint
-- [ ] "Return to Trail" restores the exact scroll position
-- [ ] SectionNav highlights the correct item while scrolling
-- [ ] ProgressIndicator stats update with scroll
-- [ ] Layout is correct at 375px, 768px, 1280px, 1440px widths
+- Scroll smoothly from hero to summit; marker tracks correctly
+- All 9 checkpoints appear at the right scroll positions
+- "Side Trail" / "Explore" buttons open the correct modal
+- Branch path animates from the correct trail point
+- Modal appears near the branch endpoint
+- "Return to Trail" restores the exact scroll position
+- SectionNav highlights the correct item while scrolling
+- ProgressIndicator stats update with scroll
+- Layout is correct at 375px, 768px, 1280px, 1440px widths
 
 ---
 
 ## Files That Require Extra Caution
 
-| File | Reason |
-|------|--------|
-| `store/trailStore.ts` | All side-trail state flows through here; breaking the shape breaks the entire transition system |
-| `components/transition/TrailViewTransition.tsx` | Orchestrator of the entire blow-off / restore cycle; animation timing is carefully tuned |
-| `hooks/useMarkerAnimation.ts` | Contains all marker travel, branch geometry, and pin animation logic; tightly coupled to TrailLayer SVG refs |
-| `lib/constants.ts` | Shared animation timing used by both `useMarkerAnimation` and `SideTrailView`; changing a value here without understanding the full timing chain will break the modal entrance |
-| `lib/trailPath.ts` | `getTrailXAtProgress` keyframes must match the SVG path in `TrailLayer.tsx` exactly |
-| `app/globals.css` | CSS custom properties here are used by Tailwind utilities and inline styles across all components |
-| `data/experiences.ts` | `locationOnTrail` values control where checkpoints appear on the SVG; wrong values break the visual layout |
-| `app/layout.tsx` | Changing the font variable name here breaks `tailwind.config.ts` `fontFamily.sans` |
+
+| File                                            | Reason                                                                                                                                                                         |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `store/trailStore.ts`                           | All side-trail state flows through here; breaking the shape breaks the entire transition system                                                                                |
+| `components/transition/TrailViewTransition.tsx` | Orchestrator of the entire blow-off / restore cycle; animation timing is carefully tuned                                                                                       |
+| `hooks/useMarkerAnimation.ts`                   | Contains all marker travel, branch geometry, and pin animation logic; tightly coupled to TrailLayer SVG refs                                                                   |
+| `lib/constants.ts`                              | Shared animation timing used by both `useMarkerAnimation` and `SideTrailView`; changing a value here without understanding the full timing chain will break the modal entrance |
+| `lib/trailPath.ts`                              | `getTrailXAtProgress` keyframes must match the SVG path in `TrailLayer.tsx` exactly                                                                                            |
+| `app/globals.css`                               | CSSSectionNav custom properties here are used by Tailwind utilities and inline styles across all components                                                                    |
+| `data/experiences.ts`                           | `locationOnTrail` values control where checkpoints appear on the SVG; wrong values break the visual layout                                                                     |
+| `app/layout.tsx`                                | Changing the font variable name here breaks `tailwind.config.ts` `fontFamily.sans`                                                                                             |
+
 
 ---
 
@@ -211,15 +213,17 @@ There are currently **no automated tests** in this repository. Until tests are a
 
 ### Naming conventions
 
-| Entity | Convention | Example |
-|--------|-----------|---------|
-| React components | PascalCase | `TrailLayer`, `SideTrailView` |
-| Hooks | camelCase prefixed `use` | `useTrailProgress` |
-| Zustand store file | camelCase | `trailStore.ts` |
-| Data arrays/records | camelCase | `experiences`, `sideTrails` |
-| CSS custom properties | `--color-*`, `--font-*` | `--color-accent` |
-| Framer variants | camelCase object keys | `blowOffItem`, `markerVisible` |
-| Constants | UPPER_SNAKE_CASE | `TRAIL_ZONE_WIDTH_PCT`, `SECTION_NAV_WIDTH` |
+
+| Entity                | Convention               | Example                                     |
+| --------------------- | ------------------------ | ------------------------------------------- |
+| React components      | PascalCase               | `TrailLayer`, `SideTrailView`               |
+| Hooks                 | camelCase prefixed `use` | `useTrailProgress`                          |
+| Zustand store file    | camelCase                | `trailStore.ts`                             |
+| Data arrays/records   | camelCase                | `experiences`, `sideTrails`                 |
+| CSS custom properties | `--color-`*, `--font-*`  | `--color-accent`                            |
+| Framer variants       | camelCase object keys    | `blowOffItem`, `markerVisible`              |
+| Constants             | UPPER_SNAKE_CASE         | `TRAIL_ZONE_WIDTH_PCT`, `SECTION_NAV_WIDTH` |
+
 
 ### File organization
 
@@ -238,15 +242,18 @@ There are currently **no automated tests** in this repository. Until tests are a
 ## Project-Specific Concepts
 
 ### `progress` (0–1)
+
 The master scroll progress value. `0` = hero top, `1` = summit (bottom of trail).
 Computed by `useTrailProgress`. Drives nearly every animation in the app.
 
 ### `locationOnTrail` (0–1)
+
 A per-checkpoint constant in `data/experiences.ts`. Marks where on the trail the
 checkpoint card appears. Converted to a scroll progress value via
 `locationToScrollProgress()` in `lib/trailPath.ts`.
 
 ### Side trail transition sequence
+
 1. User clicks "Side Trail" → `setActiveSideTrail(id, { side, branchProgress })`
 2. `TrailViewTransition` detects change → blows off trail content (Framer Motion exit)
 3. `useMarkerAnimation` (inside TrailLayer) draws branch SVG + animates pin along it (~3.2 s)
@@ -255,6 +262,7 @@ checkpoint card appears. Converted to a scroll progress value via
 6. User clicks "Return" → `setActiveSideTrail(null)` → content re-enters, scroll restored
 
 ### SVG coordinate system
+
 The trail SVG has a `viewBox` of `0 {viewY} 800 1400` (800 wide, 1400 tall visible window).
 The full path spans 4000 units tall. `viewYSpring` in `useMarkerAnimation` shifts the viewBox
 origin to follow the marker. All branch/endpoint positions are computed in SVG units then

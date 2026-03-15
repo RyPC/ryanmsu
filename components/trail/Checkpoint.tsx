@@ -45,6 +45,15 @@ const variantStyles = {
   },
 }
 
+const landmarkStyles = {
+  badge: 'bg-orange-100 text-orange-900',
+  icon: 'text-orange-600',
+  border: 'border-orange-400/70',
+  techBg: 'bg-orange-50 text-orange-900',
+  button: '',
+  buttonText: '',
+}
+
 const iconPaths: Record<string, string> = {
   trailhead: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
   campsite: 'M3 21h18M5 21V7l7-4 7 4v14M9 10v11M15 10v11',
@@ -57,45 +66,58 @@ const iconPaths: Record<string, string> = {
 
 export function Checkpoint({ checkpoint, index, heroHeight, isInViewport, isVisible, onOpenSideTrail, exitVariants }: CheckpointProps) {
   const sideOffset = index % 2 === 0 ? 'left' : 'right'
-  const styles = variantStyles[checkpoint.variant]
-  const isEducation = checkpoint.variant === 'education'
+  const isLandmark = checkpoint.isLandmark ?? false
+  const isEducation = !isLandmark && checkpoint.variant === 'education'
+  const styles = isLandmark ? landmarkStyles : variantStyles[checkpoint.variant]
 
   const positionStyle =
     sideOffset === 'left'
       ? { right: `calc(${100 - TRAIL_ZONE_LEFT_PCT}% + ${CARD_TRAIL_GAP}px)` }
       : { left: `calc(${TRAIL_ZONE_RIGHT_PCT}% + ${CARD_TRAIL_GAP}px)` }
 
+  const cardWidth = isLandmark
+    ? 'w-[26rem] max-w-[calc(100vw-2rem)]'
+    : isEducation
+      ? 'w-96 max-w-[calc(100vw-2rem)]'
+      : 'w-72 max-w-[calc(100vw-2rem)]'
+
   return (
     <motion.div
       variants={exitVariants}
-      className={`absolute z-10 ${
-        isEducation ? 'w-96 max-w-[calc(100vw-2rem)]' : 'w-72 max-w-[calc(100vw-2rem)]'
-      }`}
+      className={`absolute z-10 ${cardWidth}`}
       style={{
         top: `${checkpoint.locationOnTrail * TRAIL_CONTENT_HEIGHT + heroHeight / 2}px`,
         transform: 'translateY(-50%)',
-        pointerEvents: isInViewport ? undefined : 'none',
+        pointerEvents: isLandmark
+          ? (isVisible ? undefined : 'none')
+          : (isInViewport ? undefined : 'none'),
         ...positionStyle,
       }}
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      initial={isLandmark ? false : { opacity: 0, y: 20, scale: 0.95 }}
       animate={
-        isVisible
-          ? { opacity: 1, y: 0, scale: 1 }
-          : isInViewport
-            ? { opacity: 0.3, y: 10, scale: 0.98 }
-            : { opacity: 0, y: 20, scale: 0.95 }
+        isLandmark
+          ? { opacity: isVisible ? 1 : 0, y: 0, scale: 1 }
+          : isVisible
+            ? { opacity: 1, y: 0, scale: 1 }
+            : isInViewport
+              ? { opacity: 0.3, y: 10, scale: 0.98 }
+              : { opacity: 0, y: 20, scale: 0.95 }
       }
-      transition={{ duration: 0.4, ease: 'easeOut' }}
+      transition={isLandmark ? { duration: 0.25, ease: 'easeInOut' } : { duration: 0.4, ease: 'easeOut' }}
     >
       <div
-        className={`bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border p-4 hover:shadow-xl hover:scale-[1.02] active:scale-[0.99] transition-all duration-200 cursor-default ${
-          styles.border
-        } ${isEducation ? 'p-6' : ''}`}
+        className={`bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border transition-all duration-200 cursor-default ${styles.border} ${
+          isLandmark
+            ? 'p-6 shadow-orange-200/60 hover:shadow-orange-300/60 hover:shadow-xl'
+            : isEducation
+              ? 'p-6 hover:shadow-xl hover:scale-[1.02] active:scale-[0.99]'
+              : 'p-4 hover:shadow-xl hover:scale-[1.02] active:scale-[0.99]'
+        }`}
       >
         <div className="flex items-center gap-2 mb-2">
           <span className={styles.icon}>
             <svg
-              className={isEducation ? 'w-7 h-7' : 'w-5 h-5'}
+              className={isLandmark ? 'w-7 h-7' : isEducation ? 'w-7 h-7' : 'w-5 h-5'}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -111,19 +133,21 @@ export function Checkpoint({ checkpoint, index, heroHeight, isInViewport, isVisi
           <span
             className={`text-xs font-medium uppercase tracking-wider ${styles.badge} px-2 py-0.5 rounded`}
           >
-            {checkpoint.variant === 'experience'
-              ? 'Side Trail'
-              : checkpoint.variant === 'project'
-                ? 'Checkpoint'
-                : 'Education'}
+            {isLandmark
+              ? 'Landmark'
+              : checkpoint.variant === 'experience'
+                ? 'Side Trail'
+                : checkpoint.variant === 'project'
+                  ? 'Checkpoint'
+                  : 'Education'}
           </span>
         </div>
         <h3
-          className={`font-semibold text-gray-900 mb-1 ${isEducation ? 'text-xl' : ''}`}
+          className={`font-bold text-gray-900 mb-2 ${isLandmark ? 'text-2xl' : isEducation ? 'text-xl font-semibold' : 'font-semibold'}`}
         >
           {checkpoint.title}
         </h3>
-        <p className={`text-gray-600 mb-3 ${isEducation ? 'text-base' : 'text-sm'}`}>
+        <p className={`text-gray-600 mb-3 ${isLandmark ? 'text-base leading-relaxed' : isEducation ? 'text-base' : 'text-sm'}`}>
           {checkpoint.description}
         </p>
         {checkpoint.techStack && checkpoint.techStack.length > 0 && (
@@ -135,7 +159,7 @@ export function Checkpoint({ checkpoint, index, heroHeight, isInViewport, isVisi
             ))}
           </div>
         )}
-        {checkpoint.sideTrail && styles.button && (
+        {!isLandmark && checkpoint.sideTrail && styles.button && (
           <button
             onClick={() => onOpenSideTrail(checkpoint)}
             className={`w-full py-2 px-3 text-sm font-medium rounded-lg transition-colors cursor-pointer ${styles.button}`}
