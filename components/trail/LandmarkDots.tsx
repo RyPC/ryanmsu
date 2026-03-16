@@ -21,6 +21,8 @@ interface LandmarkDotProps {
   viewY: number
   heroHeight: number
   trailProgressHeight: number
+  onHoverCheckpoint: (checkpoint: Checkpoint, pos: { x: number; y: number }) => void
+  onHoverEnd: () => void
 }
 
 function LandmarkDot({
@@ -30,6 +32,8 @@ function LandmarkDot({
   viewY,
   heroHeight,
   trailProgressHeight,
+  onHoverCheckpoint,
+  onHoverEnd,
 }: LandmarkDotProps) {
   const progressMV = useMotionValue(progress)
 
@@ -75,7 +79,12 @@ function LandmarkDot({
   }
 
   return (
-    <g>
+    <g
+      className="pointer-events-auto cursor-default"
+      onMouseEnter={(e) => onHoverCheckpoint(checkpoint, { x: e.clientX, y: e.clientY })}
+      onMouseMove={(e) => onHoverCheckpoint(checkpoint, { x: e.clientX, y: e.clientY })}
+      onMouseLeave={onHoverEnd}
+    >
       {/* Ambient glow — opacity scales with scroll proximity */}
       <motion.circle
         cx={dotX}
@@ -115,6 +124,8 @@ interface LandmarkDotsProps {
   viewY: number
   heroHeight: number
   trailProgressHeight: number
+  onHoverCheckpoint: (checkpoint: Checkpoint, pos: { x: number; y: number }) => void
+  onHoverEnd: () => void
 }
 
 export function LandmarkDots({
@@ -124,6 +135,8 @@ export function LandmarkDots({
   viewY,
   heroHeight,
   trailProgressHeight,
+  onHoverCheckpoint,
+  onHoverEnd,
 }: LandmarkDotsProps) {
   const landmarks = checkpoints.filter((c) => c.isLandmark)
 
@@ -138,6 +151,8 @@ export function LandmarkDots({
           viewY={viewY}
           heroHeight={heroHeight}
           trailProgressHeight={trailProgressHeight}
+          onHoverCheckpoint={onHoverCheckpoint}
+          onHoverEnd={onHoverEnd}
         />
       ))}
     </>

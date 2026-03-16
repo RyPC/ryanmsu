@@ -22,6 +22,8 @@ interface TrailEndpointDotsProps {
   heroHeight: number
   trailProgressHeight: number
   onOpenSideTrail: (checkpoint: Checkpoint) => void
+  onHoverCheckpoint: (checkpoint: Checkpoint, pos: { x: number; y: number }) => void
+  onHoverEnd: () => void
 }
 
 export function TrailEndpointDots({
@@ -31,6 +33,8 @@ export function TrailEndpointDots({
   heroHeight,
   trailProgressHeight,
   onOpenSideTrail,
+  onHoverCheckpoint,
+  onHoverEnd,
 }: TrailEndpointDotsProps) {
   return (
     <>
@@ -88,6 +92,9 @@ export function TrailEndpointDots({
             tabIndex={0}
             onClick={() => onOpenSideTrail(checkpoint)}
             onKeyDown={onKeyDown}
+            onMouseEnter={(e) => onHoverCheckpoint(checkpoint, { x: e.clientX, y: e.clientY })}
+            onMouseMove={(e) => onHoverCheckpoint(checkpoint, { x: e.clientX, y: e.clientY })}
+            onMouseLeave={onHoverEnd}
             className="pointer-events-auto cursor-pointer focus:outline-none"
             aria-label={`Open side trail for ${label}`}
           >

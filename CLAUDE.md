@@ -12,7 +12,10 @@ a hiking trail metaphor. The user scrolls through a sinuous SVG trail; their pos
 every animation. "Checkpoints" (experience/project/education cards) flank the trail.
 Clicking a checkpoint's side-trail button triggers a full cinematic transition: the trail
 "blows off" screen, a branch path animates, a pin travels to an endpoint, and a detail modal
-appears. Returning to the trail restores the exact scroll position.
+appears. Returning to the trail restores the exact scroll position. Some checkpoints are
+designated **landmarks** — significant milestones that sit directly on the trail with a
+glowing orange dot and a blurb card that fades in/out based on scroll proximity only (no
+branch, no modal, no Zustand state).
 
 **Live stack:** Next.js 14 (App Router) · React 18 · TypeScript 5 · Tailwind CSS 3 ·
 Framer Motion 11 · Zustand 5
@@ -37,8 +40,10 @@ components/
                                delegates animation logic to useMarkerAnimation hook
                                and endpoint dots to TrailEndpointDots
     TrailEndpointDots.tsx     SVG clickable dots rendered at each side-trail endpoint
+    LandmarkDots.tsx          SVG glowing orange dots for landmark checkpoints; glow
+                               intensity driven by useTransform on a progress MotionValue
     TrailheadHero.tsx         Full-screen hero section (name, subtitle, scroll indicator)
-    Checkpoint.tsx            Individual experience/project/education card
+    Checkpoint.tsx            Individual experience/project/education/landmark card
     ProgressIndicator.tsx     Fixed HUD (miles, elevation, projects, techs stats)
     TopographyBackground.tsx  Fixed full-bleed topo-line SVG background layer
   nav/
@@ -79,7 +84,8 @@ scripts/
 User scrolls
   └─▶ useTrailProgress  ──▶  progress (0–1)
                                 ├─▶ TrailLayer / useMarkerAnimation  (marker Y, viewBox spring)
-                                ├─▶ Checkpoint  (fade visibility)
+                                ├─▶ LandmarkDots  (glow intensity via useTransform)
+                                ├─▶ Checkpoint  (fade visibility; landmark cards use proximity threshold)
                                 └─▶ ProgressIndicator (HUD stats)
 
 User clicks "Side Trail" on a Checkpoint
@@ -173,7 +179,8 @@ There are currently **no automated tests** in this repository. Until tests are a
 ### Manual verification checklist
 
 - Scroll smoothly from hero to summit; marker tracks correctly
-- All 9 checkpoints appear at the right scroll positions
+- All checkpoints appear at the right scroll positions
+- Landmark dot glows as the marker approaches; card fades in/out at the proximity threshold
 - "Side Trail" / "Explore" buttons open the correct modal
 - Branch path animates from the correct trail point
 - Modal appears near the branch endpoint
@@ -187,16 +194,16 @@ There are currently **no automated tests** in this repository. Until tests are a
 ## Files That Require Extra Caution
 
 
-| File                                            | Reason                                                                                                                                                                         |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `store/trailStore.ts`                           | All side-trail state flows through here; breaking the shape breaks the entire transition system                                                                                |
-| `components/transition/TrailViewTransition.tsx` | Orchestrator of the entire blow-off / restore cycle; animation timing is carefully tuned                                                                                       |
-| `hooks/useMarkerAnimation.ts`                   | Contains all marker travel, branch geometry, and pin animation logic; tightly coupled to TrailLayer SVG refs                                                                   |
-| `lib/constants.ts`                              | Shared animation timing used by both `useMarkerAnimation` and `SideTrailView`; changing a value here without understanding the full timing chain will break the modal entrance |
-| `lib/trailPath.ts`                              | `getTrailXAtProgress` keyframes must match the SVG path in `TrailLayer.tsx` exactly                                                                                            |
-| `app/globals.css`                               | CSSSectionNav custom properties here are used by Tailwind utilities and inline styles across all components                                                                    |
-| `data/experiences.ts`                           | `locationOnTrail` values control where checkpoints appear on the SVG; wrong values break the visual layout                                                                     |
-| `app/layout.tsx`                                | Changing the font variable name here breaks `tailwind.config.ts` `fontFamily.sans`                                                                                             |
+| File                                            | Reason                                                                                                                                                                                                                                          |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `store/trailStore.ts`                           | All side-trail state flows through here; breaking the shape breaks the entire transition system                                                                                                                                                 |
+| `components/transition/TrailViewTransition.tsx` | Orchestrator of the entire blow-off / restore cycle; animation timing is carefully tuned                                                                                                                                                        |
+| `hooks/useMarkerAnimation.ts`                   | Contains all marker travel, branch geometry, and pin animation logic; tightly coupled to TrailLayer SVG refs                                                                                                                                    |
+| `lib/constants.ts`                              | Shared animation timing used by both `useMarkerAnimation` and `SideTrailView`; also holds `LANDMARK_OPEN_THRESHOLD` — changing values here without understanding the full timing chain will break the modal entrance or landmark snap behaviour |
+| `lib/trailPath.ts`                              | `getTrailXAtProgress` keyframes must match the SVG path in `TrailLayer.tsx` exactly                                                                                                                                                             |
+| `app/globals.css`                               | CSSSectionNav custom properties here are used by Tailwind utilities and inline styles across all components                                                                                                                                     |
+| `data/experiences.ts`                           | `locationOnTrail` values control where checkpoints appear on the SVG; wrong values break the visual layout                                                                                                                                      |
+| `app/layout.tsx`                                | Changing the font variable name here breaks `tailwind.config.ts` `fontFamily.sans`                                                                                                                                                              |
 
 
 ---
@@ -220,7 +227,7 @@ There are currently **no automated tests** in this repository. Until tests are a
 | Hooks                 | camelCase prefixed `use` | `useTrailProgress`                          |
 | Zustand store file    | camelCase                | `trailStore.ts`                             |
 | Data arrays/records   | camelCase                | `experiences`, `sideTrails`                 |
-| CSS custom properties | `--color-`*, `--font-*`  | `--color-accent`                            |
+| CSS custom properties | `--color-`*, `--font-`*  | `--color-accent`                            |
 | Framer variants       | camelCase object keys    | `blowOffItem`, `markerVisible`              |
 | Constants             | UPPER_SNAKE_CASE         | `TRAIL_ZONE_WIDTH_PCT`, `SECTION_NAV_WIDTH` |
 
@@ -251,6 +258,25 @@ Computed by `useTrailProgress`. Drives nearly every animation in the app.
 A per-checkpoint constant in `data/experiences.ts`. Marks where on the trail the
 checkpoint card appears. Converted to a scroll progress value via
 `locationToScrollProgress()` in `lib/trailPath.ts`.
+
+### Landmark behaviour
+
+A checkpoint with `isLandmark: true` in `data/experiences.ts` is rendered differently from
+a regular checkpoint:
+
+- An orange glowing dot (`LandmarkDots.tsx`) sits directly on the SVG trail path at the
+checkpoint's `locationOnTrail` position. The ambient glow intensity is driven by a
+`useTransform` on a `MotionValue<number>` that mirrors `progress`, mapping proximity
+(within `LANDMARK_OPEN_THRESHOLD`) to opacity.
+- A blurb card (`Checkpoint.tsx`) is positioned alongside the trail and fades in/out
+(`transition: { duration: 0.25, ease: 'easeInOut' }`) when `|progress − landmarkScrollProgress| < LANDMARK_OPEN_THRESHOLD`. This threshold is computed in
+`TrailViewTransition` and passed as the `isVisible` prop.
+- **No Zustand state, no branch path, no pin animation, no modal** — landmarks are entirely
+scroll-driven and stateless.
+- `SectionNav` renders landmark items with an orange accent and a `◆` diamond prefix.
+
+To add a new landmark: set `isLandmark: true` on the entry in `data/experiences.ts`. No
+other files need changes.
 
 ### Side trail transition sequence
 

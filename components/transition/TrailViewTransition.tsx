@@ -11,7 +11,10 @@ import { SideTrailView } from "@/components/side-trail/SideTrailView";
 import { SectionNav, SECTION_NAV_WIDTH } from "@/components/nav/SectionNav";
 import { useTrailProgress } from "@/hooks/useTrailProgress";
 import { useTrailStore } from "@/store/trailStore";
-import { experiences, type Checkpoint as CheckpointType } from "@/data/experiences";
+import {
+    experiences,
+    type Checkpoint as CheckpointType,
+} from "@/data/experiences";
 import {
     getTrailMetricsFromExperiences,
     locationToScrollProgress,
@@ -62,7 +65,10 @@ export function TrailViewTransition() {
     const clickedSide = useTrailStore((s) => s.clickedSide);
     const returnScrollProgress = useTrailStore((s) => s.returnScrollProgress);
     const setActiveSideTrail = useTrailStore((s) => s.setActiveSideTrail);
-    const handleReturnComplete = useCallback(() => setActiveSideTrail(null), [setActiveSideTrail]);
+    const handleReturnComplete = useCallback(
+        () => setActiveSideTrail(null),
+        [setActiveSideTrail],
+    );
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [heroHeight, setHeroHeight] = useState(
         typeof window !== "undefined" ? window.innerHeight : 800,
@@ -100,27 +106,30 @@ export function TrailViewTransition() {
     const scrollRestoreRef = useRef({ returnScrollProgress, heroHeight });
     scrollRestoreRef.current = { returnScrollProgress, heroHeight };
 
-    const setScrollContainerRef = useCallback((el: HTMLDivElement | null) => {
-        (
-            scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>
-        ).current = el;
-        if (el) {
-            const { returnScrollProgress: p, heroHeight: h } =
-                scrollRestoreRef.current;
-            if (p != null) {
-                const scrollTop = p * (h + progressHeight);
-                // Set synchronously; direct scrollTop assignment bypasses CSS scroll-behavior.
-                el.scrollTop = scrollTop;
-                // Repeat after two rAFs in case browser layout wasn't ready on first assignment.
-                // Use direct scrollTop (not scrollTo) so scroll-smooth CSS cannot animate it.
-                requestAnimationFrame(() => {
+    const setScrollContainerRef = useCallback(
+        (el: HTMLDivElement | null) => {
+            (
+                scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>
+            ).current = el;
+            if (el) {
+                const { returnScrollProgress: p, heroHeight: h } =
+                    scrollRestoreRef.current;
+                if (p != null) {
+                    const scrollTop = p * (h + progressHeight);
+                    // Set synchronously; direct scrollTop assignment bypasses CSS scroll-behavior.
+                    el.scrollTop = scrollTop;
+                    // Repeat after two rAFs in case browser layout wasn't ready on first assignment.
+                    // Use direct scrollTop (not scrollTo) so scroll-smooth CSS cannot animate it.
                     requestAnimationFrame(() => {
-                        el.scrollTop = scrollTop;
+                        requestAnimationFrame(() => {
+                            el.scrollTop = scrollTop;
+                        });
                     });
-                });
+                }
             }
-        }
-    }, [progressHeight]);
+        },
+        [progressHeight],
+    );
 
     const isSideTrailMode = !!activeSideTrailId;
     // Blow opposite to clicked side: right-click → blow left, left-click → blow right
@@ -131,13 +140,16 @@ export function TrailViewTransition() {
     );
     const landmarkCheckpoints = checkpointItems.filter((c) => c.isLandmark);
 
-    const getCheckpointCardSide = useCallback((checkpointId: string) => {
-        const checkpointIndex = checkpointItems.findIndex(
-            (checkpoint) => checkpoint.id === checkpointId,
-        );
-        if (checkpointIndex < 0) return "right" as const;
-        return checkpointIndex % 2 === 0 ? "left" : "right";
-    }, [checkpointItems]);
+    const getCheckpointCardSide = useCallback(
+        (checkpointId: string) => {
+            const checkpointIndex = checkpointItems.findIndex(
+                (checkpoint) => checkpoint.id === checkpointId,
+            );
+            if (checkpointIndex < 0) return "right" as const;
+            return checkpointIndex % 2 === 0 ? "left" : "right";
+        },
+        [checkpointItems],
+    );
 
     const handleOpenSideTrail = useCallback(
         (checkpoint: CheckpointType) => {
@@ -250,47 +262,67 @@ export function TrailViewTransition() {
                             className="relative w-full"
                             style={{
                                 minHeight: `${trailScrollHeightPx}px`,
-                                paddingLeft: SECTION_NAV_WIDTH + CONTENT_NAV_GAP,
+                                paddingLeft:
+                                    SECTION_NAV_WIDTH + CONTENT_NAV_GAP,
                             }}
                             variants={blowOffTrailArea}
                         >
-                        <ProgressIndicator progress={progress} />
-                        {checkpointItems.filter((c) => c.isLandmark).map((checkpoint, index) => {
-                                const isLandmark = checkpoint.isLandmark ?? false;
-                                const totalHeight = heroHeight + progressHeight;
-                                const cardY = checkpoint.locationOnTrail * TRAIL_CONTENT_HEIGHT;
-                                const enterThreshold = (cardY + heroHeight / 2) / totalHeight;
-                                const revealThreshold = (cardY + heroHeight * 0.75) / totalHeight;
-                                const isInViewport = progress >= enterThreshold;
-                                const isVisible = progress >= revealThreshold;
+                            <ProgressIndicator progress={progress} />
+                            {checkpointItems
+                                .filter((c) => c.isLandmark)
+                                .map((checkpoint, index) => {
+                                    const isLandmark =
+                                        checkpoint.isLandmark ?? false;
+                                    const totalHeight =
+                                        heroHeight + progressHeight;
+                                    const cardY =
+                                        checkpoint.locationOnTrail *
+                                        TRAIL_CONTENT_HEIGHT;
+                                    const enterThreshold =
+                                        (cardY + heroHeight / 2) / totalHeight;
+                                    const revealThreshold =
+                                        (cardY + heroHeight * 0.75) /
+                                        totalHeight;
+                                    const isInViewport =
+                                        progress >= enterThreshold;
+                                    const isVisible =
+                                        progress >= revealThreshold;
 
-                                const isNearLandmark = isLandmark
-                                    ? Math.abs(
-                                          progress -
-                                              locationToScrollProgress(
-                                                  checkpoint.locationOnTrail,
-                                                  heroHeight,
-                                                  progressHeight,
-                                              ),
-                                      ) < LANDMARK_OPEN_THRESHOLD
-                                    : false;
+                                    const isNearLandmark = isLandmark
+                                        ? Math.abs(
+                                              progress -
+                                                  locationToScrollProgress(
+                                                      checkpoint.locationOnTrail,
+                                                      heroHeight,
+                                                      progressHeight,
+                                                  ),
+                                          ) < LANDMARK_OPEN_THRESHOLD
+                                        : false;
 
-                                return (
-                                    <Checkpoint
-                                        key={checkpoint.id}
-                                        checkpoint={checkpoint}
-                                        index={index}
-                                        heroHeight={heroHeight}
-                                        isInViewport={isLandmark ? true : isInViewport}
-                                        isVisible={isLandmark ? isNearLandmark : isVisible}
-                                        onOpenSideTrail={handleOpenSideTrail}
-                                        exitVariants={blowOffItem(
-                                            index + 1,
-                                            blowDirection,
-                                        )}
-                                    />
-                                );
-                            })}
+                                    return (
+                                        <Checkpoint
+                                            key={checkpoint.id}
+                                            checkpoint={checkpoint}
+                                            index={index}
+                                            heroHeight={heroHeight}
+                                            isInViewport={
+                                                isLandmark ? true : isInViewport
+                                            }
+                                            isVisible={
+                                                isLandmark
+                                                    ? isNearLandmark
+                                                    : isVisible
+                                            }
+                                            onOpenSideTrail={
+                                                handleOpenSideTrail
+                                            }
+                                            exitVariants={blowOffItem(
+                                                index + 1,
+                                                blowDirection,
+                                            )}
+                                        />
+                                    );
+                                })}
                         </motion.div>
                     </div>
                 </motion.div>
@@ -298,22 +330,29 @@ export function TrailViewTransition() {
 
             <AnimatePresence mode="wait">
                 {activeSideTrailId && (
-                <motion.div
-                    key="side-trail"
-                    initial={{ opacity: 0 }}
-                    animate={{
-                        opacity: 1,
-                        transition: { duration: 0.3, delay: 0.1, ease: [0.22, 1, 0.36, 1] },
-                    }}
-                    exit={{
-                        opacity: 0,
-                        transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
-                    }}
-                    className="absolute top-0 right-0 bottom-0 z-20"
-                    style={{ left: SECTION_NAV_WIDTH }}
-                >
-                    <SideTrailView />
-                </motion.div>
+                    <motion.div
+                        key="side-trail"
+                        initial={{ opacity: 0 }}
+                        animate={{
+                            opacity: 1,
+                            transition: {
+                                duration: 0.3,
+                                delay: 0.1,
+                                ease: [0.22, 1, 0.36, 1],
+                            },
+                        }}
+                        exit={{
+                            opacity: 0,
+                            transition: {
+                                duration: 0.4,
+                                ease: [0.22, 1, 0.36, 1],
+                            },
+                        }}
+                        className="absolute top-0 right-0 bottom-0 z-20"
+                        style={{ left: SECTION_NAV_WIDTH }}
+                    >
+                        <SideTrailView />
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
