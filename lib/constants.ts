@@ -9,6 +9,9 @@ export const BRANCH_DEFAULT_X_OFFSET = 620
 export const BRANCH_DEFAULT_Y_OFFSET = 83
 
 export const LANDMARK_OPEN_THRESHOLD = 0.06
+// Landmark popups should appear when their center is within the middle band
+// of the viewport while also being near the marker in trail-space.
+export const LANDMARK_VIEWPORT_FRACTION = 0.75
 
 export const TRAIL_SVG_WIDTH = 800
 export const VIEW_WINDOW_HEIGHT = 1400

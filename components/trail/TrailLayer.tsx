@@ -1,16 +1,19 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { type Checkpoint } from "@/data/experiences";
 import { useMarkerAnimation } from "@/hooks/useMarkerAnimation";
 import { TrailEndpointDots } from "./TrailEndpointDots";
 import { LandmarkDots } from "./LandmarkDots";
+import { LandmarkInfographic } from "./LandmarkInfographic";
 import {
     BRANCH_ANIMATION_DURATION,
     BRANCH_ANIMATION_DELAY,
     VIEW_WINDOW_HEIGHT,
+    LANDMARK_OPEN_THRESHOLD,
 } from "@/lib/constants";
+import { scrollProgressToMarkerProgress } from "@/lib/trailPath";
 
 interface HoveredInfo {
     checkpoint: Checkpoint;
@@ -96,13 +99,12 @@ const MAIN_PATH =
 
 const MARKER_CIRCLE_R = 13;
 const ARROW_TIP_Y = -49;
-const ARROW_BASE_Y = -13;
+const ARROW_BASE_Y = -(MARKER_CIRCLE_R + 7);
 const ARROW_HALF_WIDTH = 9;
 const ARROW_PATH = `M 0 ${ARROW_TIP_Y} L -${ARROW_HALF_WIDTH} ${ARROW_BASE_Y} L ${ARROW_HALF_WIDTH} ${ARROW_BASE_Y} Z`;
 
 interface TrailLayerProps {
     progress: number;
-    heroReveal: number;
     isSideTrailMode: boolean;
     sideTrailCheckpoints: Checkpoint[];
     landmarkCheckpoints: Checkpoint[];
@@ -110,11 +112,11 @@ interface TrailLayerProps {
     trailProgressHeight: number;
     onOpenSideTrail: (checkpoint: Checkpoint) => void;
     onReturnComplete?: () => void;
+    hoverResetToken?: number;
 }
 
 export function TrailLayer({
     progress,
-    heroReveal,
     isSideTrailMode,
     sideTrailCheckpoints,
     landmarkCheckpoints,
@@ -122,6 +124,7 @@ export function TrailLayer({
     trailProgressHeight,
     onOpenSideTrail,
     onReturnComplete,
+    hoverResetToken,
 }: TrailLayerProps) {
     const pathRef = useRef<SVGPathElement>(null);
     const branchPathRef = useRef<SVGPathElement>(null);
@@ -136,12 +139,38 @@ export function TrailLayer({
     );
     const handleHoverEnd = useCallback(() => setHoveredInfo(null), []);
 
-    const markerStartProgress = heroHeight / (heroHeight + trailProgressHeight);
-    const markerProgress = isSideTrailMode
-        ? progress
-        : Math.max(markerStartProgress, progress);
+    // Map scroll-based progress into marker travel so the marker only starts
+    // moving once it has come into view and reached roughly mid-screen.
+    const markerProgress = scrollProgressToMarkerProgress(
+        progress,
+        heroHeight,
+        trailProgressHeight,
+    );
+    
+    const activeLandmarkCheckpoint =
+        !isSideTrailMode
+            ? landmarkCheckpoints.find(
+                  (checkpoint) =>
+                      Math.abs(
+                          markerProgress - checkpoint.locationOnTrail,
+                      ) < LANDMARK_OPEN_THRESHOLD,
+              ) ?? null
+            : null;
 
-    const { branchPath, pinAngle, viewY, displayPinPosition } =
+    // Clear any stale hover preview whenever the parent signals a hover reset
+    // (e.g., on side-trail open or after returning to the trail).
+    const lastHoverResetTokenRef = useRef<number | undefined>(undefined);
+    useEffect(() => {
+        if (
+            hoverResetToken !== undefined &&
+            hoverResetToken !== lastHoverResetTokenRef.current
+        ) {
+            setHoveredInfo(null);
+            lastHoverResetTokenRef.current = hoverResetToken;
+        }
+    }, [hoverResetToken]);
+
+    const { branchPath, pinAngle, viewY, displayPinPosition, movementScale } =
         useMarkerAnimation({
             pathRef,
             branchPathRef,
@@ -151,17 +180,24 @@ export function TrailLayer({
             onReturnComplete,
         });
 
-    const trailOpacity = isSideTrailMode ? 1 : heroReveal;
-    const trailTranslateY = isSideTrailMode ? 0 : (1 - heroReveal) * heroHeight;
+    const ARROW_SPEED_MULTIPLIER = 2;
+    const effectiveMovement = Math.min(
+        1,
+        movementScale * ARROW_SPEED_MULTIPLIER,
+    );
+
+    const trailOpacity = 1;
+    // Trail appears at final position immediately; no hero-reveal slide.
+    const trailTranslateY = 0;
 
     return (
         <>
-            <div
+            <motion.div
                 ref={containerRef}
                 className="absolute inset-0 w-full h-full"
                 style={{
                     opacity: trailOpacity,
-                    transform: `translateY(${trailTranslateY}px)`,
+                    y: trailTranslateY,
                 }}
             >
                 {isSideTrailMode && (
@@ -224,6 +260,25 @@ export function TrailLayer({
                         strokeLinejoin="round"
                         className={isSideTrailMode ? "opacity-90" : ""}
                     />
+                    {!isSideTrailMode && (
+                        <motion.path
+                            d={MAIN_PATH}
+                            fill="none"
+                            stroke="#7c3aed"
+                            strokeWidth="6"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            initial={{ pathLength: 0 }}
+                            animate={{
+                                pathLength: Math.max(
+                                    0,
+                                    Math.min(1, markerProgress),
+                                ),
+                            }}
+                            transition={{ duration: 0 }}
+                            style={{ opacity: 0.95 }}
+                        />
+                    )}
                     {isSideTrailMode && branchPath && (
                         <motion.path
                             ref={branchPathRef}
@@ -277,12 +332,23 @@ export function TrailLayer({
                             stroke="#fff"
                             strokeWidth="2"
                         />
-                        <path
+                        <motion.path
                             d={ARROW_PATH}
                             fill="url(#markerGradient)"
                             stroke="#8b5cf6"
                             strokeWidth="2"
                             strokeLinejoin="round"
+                            initial={false}
+                            animate={{
+                                scaleY: 0.2 + effectiveMovement * 1.6,
+                                translateY:
+                                    (1 - (0.2 + effectiveMovement * 1.6)) * 10,
+                                opacity: Math.min(
+                                    1,
+                                    effectiveMovement * effectiveMovement * 1.2,
+                                ),
+                            }}
+                            transition={{ duration: 0.12, ease: "easeOut" }}
                         />
                     </motion.g>
                     {!isSideTrailMode && (
@@ -310,7 +376,11 @@ export function TrailLayer({
                         </>
                     )}
                 </motion.svg>
-            </div>
+            </motion.div>
+            <LandmarkInfographic
+                checkpoint={activeLandmarkCheckpoint}
+                isVisible={activeLandmarkCheckpoint !== null}
+            />
             <AnimatePresence>
                 {hoveredInfo && !isSideTrailMode && (
                     <TrailTooltip

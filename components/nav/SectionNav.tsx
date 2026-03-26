@@ -65,7 +65,7 @@ export function SectionNav({
 
     if (activeSideTrailId) {
       // Close side trail and scroll to section on return
-      setActiveSideTrail(null, { progress: targetProgress });
+      setActiveSideTrail(null, { returnScrollProgress: targetProgress });
       return;
     }
 

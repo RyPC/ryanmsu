@@ -22,6 +22,10 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))
 }
 
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * Math.max(0, Math.min(1, t))
+}
+
 function getPointOnPath(pathEl: SVGPathElement | null, t: number) {
   if (!pathEl) return null
   const pt = pathEl.getPointAtLength(t * pathEl.getTotalLength())
@@ -59,6 +63,8 @@ export interface MarkerAnimationState {
   viewY: number
   displayPinPosition: { x: number; y: number }
   isReturning: boolean
+  isMoving: boolean
+  movementScale: number
 }
 
 export function useMarkerAnimation({
@@ -80,31 +86,67 @@ export function useMarkerAnimation({
   const clampedBranchLength = clamp(activeBranchLength, BRANCH_LENGTH_MIN, BRANCH_LENGTH_MAX)
   const pinTravelDuration = PIN_TRAVEL_DURATION_BASE * clampedBranchLength
 
+  // Marker starts exactly on the trail path once the SVG path is available.
   const [markerPoint, setMarkerPoint] = useState({ x: 200, y: 0 })
   const [branchPath, setBranchPath] = useState('')
   const [pinPosition, setPinPosition] = useState({ x: 200, y: 0 })
   const [pinAngle, setPinAngle] = useState(0)
   const pinBranchProgress = useSpring(0, { stiffness: 120, damping: 30 })
   const prevProgressRef = useRef(progress)
+  const prevMarkerPointRef = useRef<{ x: number; y: number }>({ x: 200, y: 0 })
+  const prevPinPositionRef = useRef<{ x: number; y: number }>({ x: 200, y: 0 })
   const isReturningRef = useRef(isReturning)
   isReturningRef.current = isReturning
+  const [isMoving, setIsMoving] = useState(false)
+  const movementTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const movementScaleRef = useRef(0)
+  const [movementScale, setMovementScale] = useState(0)
+
+  const MARKER_MOVEMENT_EPSILON_SQ = 0.75 * 0.75
+  const PIN_MOVEMENT_EPSILON_SQ = 0.75 * 0.75
+
+  const scheduleMovementStop = useCallback(() => {
+    if (movementTimeoutRef.current !== null) {
+      clearTimeout(movementTimeoutRef.current)
+    }
+    movementTimeoutRef.current = setTimeout(() => {
+      setIsMoving(false)
+      movementScaleRef.current = 0
+      setMovementScale(0)
+      movementTimeoutRef.current = null
+    }, 140)
+  }, [])
+
+  const markMoving = useCallback((distanceSq: number) => {
+    const distance = Math.sqrt(distanceSq)
+    const normalized = clamp(distance / 12, 0, 1)
+    const blended = lerp(movementScaleRef.current, normalized, 0.4)
+    movementScaleRef.current = blended
+    setMovementScale(blended)
+    if (!isMoving) {
+      setIsMoving(true)
+    }
+    scheduleMovementStop()
+  }, [isMoving, scheduleMovementStop])
 
   // Separate motion value so we can animate the marker to the branch point
   // before the pin takes over, rather than teleporting.
   const displayedMarkerProgress = useMotionValue(progress)
   const [markerHasArrived, setMarkerHasArrived] = useState(false)
 
-  const minViewY = TRAIL_PATH_MIN_Y - HALF_VIEW_WINDOW_HEIGHT
-  const maxViewY = TRAIL_PATH_MAX_Y - HALF_VIEW_WINDOW_HEIGHT
-  const targetViewY = clamp(markerPoint.y - HALF_VIEW_WINDOW_HEIGHT, minViewY, maxViewY)
-  const viewYSpring = useSpring(targetViewY, { stiffness: 80, damping: 20, restDelta: 0.5 })
-  const [viewY, setViewY] = useState(targetViewY)
+  // Start with the marker lower on screen (bottom 25%), then blend to the
+  // normal mid-screen lock once it reaches the middle.
+  const startOffsetY = VIEW_WINDOW_HEIGHT * 0.75
+  const midOffsetY = VIEW_WINDOW_HEIGHT * 0.5
+  const rampDistance = VIEW_WINDOW_HEIGHT * 0.25
+  const rampT = rampDistance > 0 ? markerPoint.y / rampDistance : 1
+  const targetOffsetY = lerp(startOffsetY, midOffsetY, rampT)
 
-  useEffect(() => {
-    viewYSpring.set(targetViewY)
-  }, [targetViewY, viewYSpring])
-
-  useMotionValueEvent(viewYSpring, 'change', (latest) => setViewY(latest))
+  // Allow the camera to start above the trail so the marker can sit in the
+  // bottom quarter immediately (this requires viewY < -HALF_VIEW_WINDOW_HEIGHT).
+  const minViewY = TRAIL_PATH_MIN_Y - startOffsetY
+  const maxViewY = TRAIL_PATH_MAX_Y - midOffsetY
+  const viewY = clamp(markerPoint.y - targetOffsetY, minViewY, maxViewY)
 
   useEffect(() => {
     const path = pathRef.current
@@ -159,11 +201,34 @@ export function useMarkerAnimation({
     const path = pathRef.current
     if (!path) return
     const point = path.getPointAtLength(latest * path.getTotalLength())
-    setMarkerPoint({ x: point.x, y: point.y })
+    const nextMarkerPoint = { x: point.x, y: point.y }
+    const prevMarkerPoint = prevMarkerPointRef.current
+    const dx = nextMarkerPoint.x - prevMarkerPoint.x
+    const dy = nextMarkerPoint.y - prevMarkerPoint.y
+    const distanceSq = dx * dx + dy * dy
+    if (distanceSq > MARKER_MOVEMENT_EPSILON_SQ) {
+      markMoving(distanceSq)
+    }
+    prevMarkerPointRef.current = nextMarkerPoint
+    setMarkerPoint(nextMarkerPoint)
     const scrollForward = latest >= prevProgressRef.current
     prevProgressRef.current = latest
     setPinAngle(getTangentAngle(path, latest, scrollForward))
   })
+
+  // On initial mount, once the main trail path exists, snap the marker to the
+  // correct position on the path for the current progress (typically 0 at top),
+  // so it does not briefly appear offset to the left before the first scroll.
+  useEffect(() => {
+    const path = pathRef.current
+    if (!path) return
+    const t = displayedMarkerProgress.get()
+    const point = path.getPointAtLength(t * path.getTotalLength())
+    setMarkerPoint({ x: point.x, y: point.y })
+    prevProgressRef.current = t
+    const scrollForward = true
+    setPinAngle(getTangentAngle(path, t, scrollForward))
+  }, [pathRef, displayedMarkerProgress])
 
   useEffect(() => {
     if (isSideTrailMode && branchPath && !isReturning) {
@@ -190,10 +255,25 @@ export function useMarkerAnimation({
     const branchEl = branchPathRef.current
     if (isSideTrailMode && branchPath && branchEl) {
       const pt = getPointOnPath(branchEl, latest)
-      if (pt) setPinPosition(pt)
+      if (pt) {
+        const nextPinPosition = { x: pt.x, y: pt.y }
+        const prevPinPosition = prevPinPositionRef.current
+        const dx = nextPinPosition.x - prevPinPosition.x
+        const dy = nextPinPosition.y - prevPinPosition.y
+        const distanceSq = dx * dx + dy * dy
+        if (distanceSq > PIN_MOVEMENT_EPSILON_SQ) {
+          markMoving(distanceSq)
+        }
+        prevPinPositionRef.current = nextPinPosition
+        setPinPosition(nextPinPosition)
+      }
       setPinAngle(getTangentAngle(branchEl, latest, !isReturningRef.current))
     } else {
       setPinPosition(markerPoint)
+      // In the absence of an active branch, defer movement status to the main marker updates.
+      if (!isSideTrailMode) {
+        setIsMoving(false)
+      }
     }
   })
 
@@ -239,5 +319,14 @@ export function useMarkerAnimation({
   const displayPinPosition =
     isSideTrailMode && branchPath && markerHasArrived ? pinPosition : markerPoint
 
-  return { branchPath, markerPoint, pinAngle, viewY, displayPinPosition, isReturning }
+  return {
+    branchPath,
+    markerPoint,
+    pinAngle,
+    viewY,
+    displayPinPosition,
+    isReturning,
+    isMoving,
+    movementScale,
+  }
 }

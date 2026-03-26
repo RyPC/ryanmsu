@@ -21,8 +21,12 @@ function lerp(a: number, b: number, t: number) {
   return a + (b - a) * Math.max(0, Math.min(1, t))
 }
 
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value))
+}
+
 export function getTrailXAtProgress(progress: number): number {
-  const t = Math.max(0, Math.min(1, progress))
+  const t = clamp01(progress)
   for (let i = 0; i < TRAIL_X_KEYFRAMES.length - 1; i++) {
     const [t0, x0] = TRAIL_X_KEYFRAMES[i]
     const [t1, x1] = TRAIL_X_KEYFRAMES[i + 1]
@@ -73,15 +77,50 @@ export function getTrailMetricsFromExperiences(
 }
 
 /**
- * Converts locationOnTrail (0-1) to scroll progress (0-1).
- * scrollTop at locationOnTrail = heroHeight + locationOnTrail * TRAIL_CONTENT_HEIGHT
+ * Maps scroll-based progress (0–1 over hero+trail scroll height) into a
+ * normalized marker progress (0–1 along the trail path).
+ *
+ * The mapping is strictly linear so that the marker, hero, and trail all
+ * advance through trail-space at the same rate everywhere. A given
+ * scrollProgress always corresponds to the same marker trail progress.
  */
+export function scrollProgressToMarkerProgress(
+  scrollProgress: number,
+  heroHeight: number,
+  trailProgressHeight: number,
+): number {
+  const totalScrollHeight = heroHeight + trailProgressHeight
+  if (totalScrollHeight <= 0) return 0
+  // Cards are positioned in a fixed 0–TRAIL_CONTENT_HEIGHT coordinate space.
+  // Convert scroll progress into an equivalent trail-space fraction so the
+  // marker aligns with checkpoint cards and landmark dots.
+  const scrollTopPx = clamp01(scrollProgress) * totalScrollHeight
+  return clamp01(scrollTopPx / TRAIL_CONTENT_HEIGHT)
+}
+
+/**
+ * Given a desired marker trail progress (0–1), returns the scroll-space
+ * progress at which the marker should be at that trail position.
+ *
+ * This uses the same relationship as locationToScrollProgress so that
+ * markerProgress, checkpoint locationOnTrail, and scroll progress remain
+ * perfectly aligned.
+ */
+export function markerProgressToScrollProgress(
+  markerProgress: number,
+  heroHeight: number,
+  trailProgressHeight: number,
+): number {
+  const totalScrollHeight = heroHeight + trailProgressHeight
+  if (totalScrollHeight <= 0) return 0
+  const markerTopPx = clamp01(markerProgress) * TRAIL_CONTENT_HEIGHT
+  return clamp01(markerTopPx / totalScrollHeight)
+}
+
 export function locationToScrollProgress(
   locationOnTrail: number,
   heroHeight: number,
   trailProgressHeight: number
 ): number {
-  const totalHeight = heroHeight + trailProgressHeight
-  const scrollTop = heroHeight + locationOnTrail * TRAIL_CONTENT_HEIGHT
-  return Math.min(1, scrollTop / totalHeight)
+  return markerProgressToScrollProgress(locationOnTrail, heroHeight, trailProgressHeight)
 }

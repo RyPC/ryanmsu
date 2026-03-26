@@ -18,9 +18,13 @@ import {
 import {
     getTrailMetricsFromExperiences,
     locationToScrollProgress,
+    scrollProgressToMarkerProgress,
     TRAIL_CONTENT_HEIGHT,
 } from "@/lib/trailPath";
-import { LANDMARK_OPEN_THRESHOLD } from "@/lib/constants";
+import {
+    LANDMARK_OPEN_THRESHOLD,
+    LANDMARK_VIEWPORT_FRACTION,
+} from "@/lib/constants";
 
 const CONTENT_NAV_GAP = 24;
 const TRAIL_ZONE_WIDTH_PCT = 28;
@@ -139,6 +143,31 @@ export function TrailViewTransition() {
         (c) => c.sideTrail && c.sideTrailId,
     );
     const landmarkCheckpoints = checkpointItems.filter((c) => c.isLandmark);
+    const [hoverResetToken, setHoverResetToken] = useState(0);
+
+    // Track transitions into and out of side-trail mode so we can clear any
+    // stale hover previews both when entering a side trail and after
+    // returning to the main trail.
+    const prevActiveSideTrailIdRef = useRef<string | null>(activeSideTrailId);
+    useEffect(() => {
+        const prevId = prevActiveSideTrailIdRef.current;
+        if (!prevId && activeSideTrailId) {
+            // Just entered a side trail from the main trail.
+            setHoverResetToken((token) => token + 1);
+        } else if (prevId && !activeSideTrailId) {
+            // Just returned from a side trail to the main trail.
+            setHoverResetToken((token) => token + 1);
+        }
+        prevActiveSideTrailIdRef.current = activeSideTrailId;
+    }, [activeSideTrailId]);
+
+    // Marker trail-space progress that powers marker movement and landmark
+    // behavior; derived from scroll-based progress using the shared helper.
+    const markerProgress = scrollProgressToMarkerProgress(
+        progress,
+        heroHeight,
+        progressHeight,
+    );
 
     const getCheckpointCardSide = useCallback(
         (checkpointId: string) => {
@@ -154,7 +183,12 @@ export function TrailViewTransition() {
     const handleOpenSideTrail = useCallback(
         (checkpoint: CheckpointType) => {
             if (!checkpoint.sideTrailId) return;
-            const branchProgress = locationToScrollProgress(
+            // Use the checkpoint's canonical location along the trail as the
+            // stable intersection point. We:
+            // - Store branchProgress in trail-space (locationOnTrail).
+            // - Compute the scroll-space progress at which the marker will sit
+            //   at that trail location using the shared mapping inverse.
+            const intersectionScrollProgress = locationToScrollProgress(
                 checkpoint.locationOnTrail,
                 heroHeight,
                 progressHeight,
@@ -163,7 +197,8 @@ export function TrailViewTransition() {
                 checkpoint.sideTrailEndpoint?.side ??
                 getCheckpointCardSide(checkpoint.id);
             setActiveSideTrail(checkpoint.sideTrailId, {
-                progress: branchProgress,
+                branchProgress: checkpoint.locationOnTrail,
+                returnScrollProgress: intersectionScrollProgress,
                 side,
                 checkpointId: checkpoint.id,
                 endpoint: {
@@ -173,7 +208,12 @@ export function TrailViewTransition() {
                 branchLength: checkpoint.branchLength,
             });
         },
-        [getCheckpointCardSide, heroHeight, progressHeight, setActiveSideTrail],
+        [
+            getCheckpointCardSide,
+            heroHeight,
+            progressHeight,
+            setActiveSideTrail,
+        ],
     );
 
     return (
@@ -202,7 +242,6 @@ export function TrailViewTransition() {
                 >
                     <TrailLayer
                         progress={progress}
-                        heroReveal={heroReveal}
                         isSideTrailMode={isSideTrailMode}
                         sideTrailCheckpoints={sideTrailCheckpoints}
                         landmarkCheckpoints={landmarkCheckpoints}
@@ -210,6 +249,7 @@ export function TrailViewTransition() {
                         trailProgressHeight={progressHeight}
                         onOpenSideTrail={handleOpenSideTrail}
                         onReturnComplete={handleReturnComplete}
+                        hoverResetToken={hoverResetToken}
                     />
                 </div>
             </div>
@@ -273,31 +313,41 @@ export function TrailViewTransition() {
                                 .map((checkpoint, index) => {
                                     const isLandmark =
                                         checkpoint.isLandmark ?? false;
-                                    const totalHeight =
+                                    const totalScrollHeightPx =
                                         heroHeight + progressHeight;
-                                    const cardY =
+                                    const scrollTopPx =
+                                        progress * totalScrollHeightPx;
+                                    const cardCenterTopPx =
                                         checkpoint.locationOnTrail *
-                                        TRAIL_CONTENT_HEIGHT;
-                                    const enterThreshold =
-                                        (cardY + heroHeight / 2) / totalHeight;
-                                    const revealThreshold =
-                                        (cardY + heroHeight * 0.75) /
-                                        totalHeight;
-                                    const isInViewport =
-                                        progress >= enterThreshold;
-                                    const isVisible =
-                                        progress >= revealThreshold;
+                                            TRAIL_CONTENT_HEIGHT +
+                                        heroHeight / 2;
+                                    const cardCenterInViewportPx =
+                                        cardCenterTopPx - scrollTopPx;
 
+                                    const bandTopPx =
+                                        (0.5 - LANDMARK_VIEWPORT_FRACTION / 2) *
+                                        heroHeight;
+                                    const bandBottomPx =
+                                        (0.5 + LANDMARK_VIEWPORT_FRACTION / 2) *
+                                        heroHeight;
+
+                                    const isInViewportBand =
+                                        cardCenterInViewportPx >= bandTopPx &&
+                                        cardCenterInViewportPx <= bandBottomPx;
+
+                                    // Landmark visibility is gated by both:
+                                    // - trail-space proximity (marker vs landmark),
+                                    // - card being within the middle viewport band.
                                     const isNearLandmark = isLandmark
                                         ? Math.abs(
-                                              progress -
-                                                  locationToScrollProgress(
-                                                      checkpoint.locationOnTrail,
-                                                      heroHeight,
-                                                      progressHeight,
-                                                  ),
+                                              markerProgress -
+                                                  checkpoint.locationOnTrail,
                                           ) < LANDMARK_OPEN_THRESHOLD
                                         : false;
+                                    // For visibility, trail-space proximity is the primary gate.
+                                    // The viewport band is used to keep the card roughly centered
+                                    // but should not completely suppress visibility.
+                                    const isLandmarkVisible = isNearLandmark;
 
                                     return (
                                         <Checkpoint
@@ -306,18 +356,16 @@ export function TrailViewTransition() {
                                             index={index}
                                             heroHeight={heroHeight}
                                             isInViewport={
-                                                isLandmark ? true : isInViewport
+                                                isInViewportBand
                                             }
                                             isVisible={
-                                                isLandmark
-                                                    ? isNearLandmark
-                                                    : isVisible
+                                                isLandmarkVisible
                                             }
                                             onOpenSideTrail={
                                                 handleOpenSideTrail
                                             }
                                             exitVariants={blowOffItem(
-                                                index + 1,
+                                                index + 2,
                                                 blowDirection,
                                             )}
                                         />

@@ -32,7 +32,9 @@ Before writing a single line of code:
 
 - **No new npm packages** without explicit user approval.
 - **No `any` types** — use proper TypeScript types.
-- **No inline `style` objects for colors** — use `var(--color-*)` CSS custom properties.
+- **Prefer Tailwind + CSS variables for colors** — use `var(--color-*)` for theme colors.
+  Inline `style` is acceptable for small one-off visual accents (e.g. subtle `rgba(...)`
+  borders/backgrounds) when Tailwind utilities would be more verbose.
 - **No class components, no `useEffect` for derived state** — derive values inline or via
   `useMemo`.
 - **No modifications to `src/` or `dist/`** — these are vestigial directories.

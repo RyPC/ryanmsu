@@ -1,6 +1,6 @@
 import type { KeyboardEvent } from 'react'
 import type { Checkpoint } from '@/data/experiences'
-import { getTrailXAtProgress, locationToScrollProgress } from '@/lib/trailPath'
+import { getTrailXAtProgress } from '@/lib/trailPath'
 import {
   BRANCH_DEFAULT_X_OFFSET,
   BRANCH_DEFAULT_Y_OFFSET,
@@ -47,20 +47,19 @@ export function TrailEndpointDots({
         const xOffset = (checkpoint.sideTrailEndpoint?.xOffset ?? BRANCH_DEFAULT_X_OFFSET) * branchLength
         const yOffset = (checkpoint.sideTrailEndpoint?.yOffset ?? BRANCH_DEFAULT_Y_OFFSET) * branchLength
 
-        const branchStartProgress = locationToScrollProgress(
-          checkpoint.locationOnTrail,
-          heroHeight,
-          trailProgressHeight,
-        )
+        // Use trail-space progress (locationOnTrail) as the single source of
+        // truth for the intersection between the main trail and the side trail,
+        // so the on-trail marker, branch start, and endpoint dots all agree.
+        const branchTrailProgress = clamp(checkpoint.locationOnTrail, 0, 1)
 
-        const fallbackStartX = getTrailXAtProgress(branchStartProgress)
-        const fallbackStartY = branchStartProgress * TRAIL_PATH_MAX_Y
+        const fallbackStartX = getTrailXAtProgress(branchTrailProgress)
+        const fallbackStartY = branchTrailProgress * TRAIL_PATH_MAX_Y
         let startX = fallbackStartX
         let startY = fallbackStartY
 
         const path = pathRef.current
         if (path) {
-          const startPoint = path.getPointAtLength(clamp(branchStartProgress, 0, 1) * path.getTotalLength())
+          const startPoint = path.getPointAtLength(branchTrailProgress * path.getTotalLength())
           startX = startPoint.x
           startY = startPoint.y
         }

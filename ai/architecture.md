@@ -38,7 +38,8 @@ app/layout.tsx
         ├── ProgressIndicator      (client, fixed top-right HUD)
         │
         ├── [trail view — AnimatePresence]
-        │   ├── TrailheadHero      (client, scroll trigger area)
+        │   ├── TrailheadHero      (client, hero intro, scroll cue)
+        │   ├── TrailheadSection   (client, "about me" trailhead card)
         │   ├── TrailLayer         (client, SVG trail + marker + branches)
         │   └── Checkpoint ×9      (client, experience/project/education cards)
         │
@@ -76,29 +77,39 @@ With 9 checkpoints and 6 side trails: `max(2800, 1800 + 2250 + 1200) = 5250px`
 ## Zustand Store Shape
 
 ```typescript
-interface TrailStore {
-  // Side trail modal state
+interface TrailState {
   activeSideTrailId: string | null
-  activeCheckpointId: string | null
-  branchProgress: number | null          // trail progress (0–1) at branch point
-  clickedSide: 'left' | 'right' | null   // which side the checkpoint was on
+  branchProgress: number | null                 // trail-space progress (0–1) at branch point
+  clickedSide: 'left' | 'right' | null          // which side the checkpoint was on
   selectedEndpoint: {
     xOffset?: number                     // SVG units from trail center
     yOffset?: number                     // SVG units from branch point
   } | null
+  activeBranchLength: number                    // multiplier for branch animation length
   branchEndScreenPosition: { x: number; y: number } | null  // px, for modal placement
   returnScrollProgress: number | null    // restores scroll on return
+  isReturning: boolean                   // set during return animation
 
   // Actions
-  setActiveSideTrail: (id: string | null, options?: {...}) => void
+  setActiveSideTrail: (
+    id: string | null,
+    options?: {
+      branchProgress?: number
+      returnScrollProgress?: number
+      side?: 'left' | 'right'
+      checkpointId?: string
+      endpoint?: { xOffset?: number; yOffset?: number }
+      branchLength?: number
+    }
+  ) => void
+  beginReturnToTrail: () => void
   setBranchEndScreenPosition: (pos: { x: number; y: number } | null) => void
-  clearReturnScrollProgress: () => void
 }
 ```
 
 **Warning:** `branchEndScreenPosition` is written by `TrailLayer` and read by
-`SideTrailView`. It is set asynchronously after the branch animation completes.
-`SideTrailView` waits 3.6 s before mounting to ensure the position is available.
+`SideTrailView`. It is set asynchronously after the branch animation completes, so the
+modal entrance is timed to occur after pin arrival.
 
 ---
 
@@ -203,7 +214,5 @@ Tailwind `theme.extend.fontFamily.sans` references `var(--font-dm-sans)` which i
 |------|----------|--------|
 | Stale `dist/` directory | repo root | None (gitignored) |
 | Empty `src/` directory | repo root | None |
-| Stale README.md | repo root | Confusing — still says "Vite" |
-| `TrailMarker.tsx` unused | `components/trail/` | None (harmless) |
 | No automated tests | — | Manual verification required for all changes |
 | No CI/CD | — | Deploy manually |

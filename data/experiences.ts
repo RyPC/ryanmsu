@@ -59,6 +59,18 @@ export const experiences: Checkpoint[] = [
     sideTrail: false,
   },
   {
+    id: 'about-me',
+    title: 'About Me',
+    type: 'checkpoint',
+    variant: 'education',
+    description:
+      "I build software the way a good trail is built — deliberate lines, solid footing, and care for the people walking it. I’m a CS student at UC Irvine who loves shipping scrappy tools that earn trust through tiny UX details. Outside of engineering: skiing, climbing, and long hikes with friends.",
+    locationOnTrail: 0.08,
+    icon: 'trailhead',
+    sideTrail: false,
+    isLandmark: true,
+  },
+  {
     id: 'first-projects',
     title: 'First Projects',
     type: 'checkpoint',

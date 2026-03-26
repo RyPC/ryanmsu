@@ -43,6 +43,7 @@ components/
     LandmarkDots.tsx          SVG glowing orange dots for landmark checkpoints; glow
                                intensity driven by useTransform on a progress MotionValue
     TrailheadHero.tsx         Full-screen hero section (name, subtitle, scroll indicator)
+    TrailheadSection.tsx      "Trailhead" about section card (appears after hero)
     Checkpoint.tsx            Individual experience/project/education/landmark card
     ProgressIndicator.tsx     Fixed HUD (miles, elevation, projects, techs stats)
     TopographyBackground.tsx  Fixed full-bleed topo-line SVG background layer
@@ -155,7 +156,7 @@ There is no database, no backend API, and no authentication layer.
    `locationOnTrail`, `branch`, `marker`, `summit`). Preserve this language.
 9. **Client components require `"use client"`.** Every component that uses hooks, Framer
   Motion, or browser APIs must have `"use client"` as its first line.
-10. `**data/` is the single source of truth.** All content (experience text, tech stacks,
+10. **`data/` is the single source of truth.** All content (experience text, tech stacks,
   side trail details) lives in `data/experiences.ts` and `data/sideTrails.ts`. Content
     changes go only there.
 11. **Do not modify `src/` or `dist/`.** Both are vestigial directories from a prior Vite
@@ -201,7 +202,7 @@ There are currently **no automated tests** in this repository. Until tests are a
 | `hooks/useMarkerAnimation.ts`                   | Contains all marker travel, branch geometry, and pin animation logic; tightly coupled to TrailLayer SVG refs                                                                                                                                    |
 | `lib/constants.ts`                              | Shared animation timing used by both `useMarkerAnimation` and `SideTrailView`; also holds `LANDMARK_OPEN_THRESHOLD` — changing values here without understanding the full timing chain will break the modal entrance or landmark snap behaviour |
 | `lib/trailPath.ts`                              | `getTrailXAtProgress` keyframes must match the SVG path in `TrailLayer.tsx` exactly                                                                                                                                                             |
-| `app/globals.css`                               | CSSSectionNav custom properties here are used by Tailwind utilities and inline styles across all components                                                                                                                                     |
+| `app/globals.css`                               | CSS custom properties here are used by Tailwind utilities and inline styles across all components                                                                                                                                              |
 | `data/experiences.ts`                           | `locationOnTrail` values control where checkpoints appear on the SVG; wrong values break the visual layout                                                                                                                                      |
 | `app/layout.tsx`                                | Changing the font variable name here breaks `tailwind.config.ts` `fontFamily.sans`                                                                                                                                                              |
 

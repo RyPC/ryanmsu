@@ -1,39 +1,29 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useSpring, useMotionValueEvent } from "framer-motion"
-import { TOPO_PATHS } from "@/data/topoPaths"
+import { TOPO_PATHS } from "@/data/topoPaths";
 import {
     VIEW_WINDOW_HEIGHT,
     TRAIL_PATH_MAX_Y,
     HALF_VIEW_WINDOW_HEIGHT,
-} from "@/lib/constants"
+} from "@/lib/constants";
 
 function clamp(v: number, min: number, max: number) {
-    return Math.max(min, Math.min(max, v))
+    return Math.max(min, Math.min(max, v));
 }
 
 interface TopographyBackgroundProps {
-    progress: number
+    progress: number;
 }
 
 export function TopographyBackground({ progress }: TopographyBackgroundProps) {
     // Approximates the TrailLayer viewBox using linear progress * max-Y.
     // Small drift from the exact path geometry is acceptable for a background element.
-    const targetViewY = clamp(
+    // Uses direct value (no spring) so it scrolls 1:1 with scroll position.
+    const viewY = clamp(
         progress * TRAIL_PATH_MAX_Y - HALF_VIEW_WINDOW_HEIGHT,
         -HALF_VIEW_WINDOW_HEIGHT,
         TRAIL_PATH_MAX_Y - HALF_VIEW_WINDOW_HEIGHT,
-    )
-
-    const viewYSpring = useSpring(targetViewY, { stiffness: 80, damping: 20, restDelta: 0.5 })
-    const [viewY, setViewY] = useState(targetViewY)
-
-    useEffect(() => {
-        viewYSpring.set(targetViewY)
-    }, [targetViewY, viewYSpring])
-
-    useMotionValueEvent(viewYSpring, "change", (v) => setViewY(v))
+    );
 
     return (
         <div
@@ -86,5 +76,5 @@ export function TopographyBackground({ progress }: TopographyBackgroundProps) {
                 ))}
             </svg>
         </div>
-    )
+    );
 }

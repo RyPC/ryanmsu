@@ -24,7 +24,8 @@ interface TrailState {
   setActiveSideTrail: (
     id: string | null,
     options?: {
-      progress?: number
+      branchProgress?: number
+      returnScrollProgress?: number
       side?: ClickedSide
       checkpointId?: string
       endpoint?: SelectedSideTrailEndpoint
@@ -49,17 +50,17 @@ export const useTrailStore = create<TrailState>((set) => ({
       activeSideTrailId: id,
       isReturning: false,
       branchProgress:
-        id != null && typeof options?.progress === 'number' ? options.progress : null,
+        id != null && typeof options?.branchProgress === 'number'
+          ? options.branchProgress
+          : null,
       clickedSide: id != null && options?.side ? options.side : null,
       selectedEndpoint: id != null ? options?.endpoint ?? null : null,
       activeBranchLength: id != null ? (options?.branchLength ?? 1.0) : 1.0,
       branchEndScreenPosition: null,
       returnScrollProgress:
-        id != null && typeof options?.progress === 'number'
-          ? options.progress
-          : id == null && typeof options?.progress === 'number'
-            ? options.progress
-            : state.returnScrollProgress,
+        typeof options?.returnScrollProgress === 'number'
+          ? options.returnScrollProgress
+          : state.returnScrollProgress,
     })),
   beginReturnToTrail: () => set({ isReturning: true }),
   setBranchEndScreenPosition: (pos) =>

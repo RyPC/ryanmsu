@@ -158,12 +158,15 @@ For theme colors that are not in the Tailwind palette, use inline style or a CSS
 // Preferred — CSS variable
 <div style={{ color: 'var(--color-accent)' }}>
 
-// Avoid — hard-coded hex
+// Avoid — hard-coded hex for theme colors
 <div style={{ color: '#7c3aed' }}>
 
 // OK for standard Tailwind colors already in the palette
 <div className="text-violet-600">
 ```
+
+Small one-off visual accents (e.g. subtle `rgba(...)` borders/backgrounds) are acceptable
+inline when they are purely presentational and not part of the theme system.
 
 ---
 
