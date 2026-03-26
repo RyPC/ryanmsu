@@ -69,6 +69,7 @@ export function TrailViewTransition() {
     const clickedSide = useTrailStore((s) => s.clickedSide);
     const returnScrollProgress = useTrailStore((s) => s.returnScrollProgress);
     const setActiveSideTrail = useTrailStore((s) => s.setActiveSideTrail);
+    const clearReturnScrollProgress = useTrailStore((s) => s.clearReturnScrollProgress);
     const handleReturnComplete = useCallback(
         () => setActiveSideTrail(null),
         [setActiveSideTrail],
@@ -127,12 +128,13 @@ export function TrailViewTransition() {
                     requestAnimationFrame(() => {
                         requestAnimationFrame(() => {
                             el.scrollTop = scrollTop;
+                            clearReturnScrollProgress();
                         });
                     });
                 }
             }
         },
-        [progressHeight],
+        [progressHeight, clearReturnScrollProgress],
     );
 
     const isSideTrailMode = !!activeSideTrailId;

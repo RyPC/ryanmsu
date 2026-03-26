@@ -34,6 +34,7 @@ interface TrailState {
   ) => void
   beginReturnToTrail: () => void
   setBranchEndScreenPosition: (pos: BranchEndPosition | null) => void
+  clearReturnScrollProgress: () => void
 }
 
 export const useTrailStore = create<TrailState>((set) => ({
@@ -65,4 +66,5 @@ export const useTrailStore = create<TrailState>((set) => ({
   beginReturnToTrail: () => set({ isReturning: true }),
   setBranchEndScreenPosition: (pos) =>
     set({ branchEndScreenPosition: pos }),
+  clearReturnScrollProgress: () => set({ returnScrollProgress: null }),
 }))
