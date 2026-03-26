@@ -178,6 +178,22 @@ export function Checkpoint({
                 >
                     {checkpoint.description}
                 </p>
+                {isLandmark && checkpoint.links && checkpoint.links.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                        {checkpoint.links.map((link) => (
+                            <a
+                                key={link.href}
+                                href={link.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 rounded-md border border-orange-200/60 bg-orange-50/80 px-3 py-1 text-xs font-medium text-orange-900 transition-colors hover:bg-orange-100/80"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {link.label}
+                            </a>
+                        ))}
+                    </div>
+                )}
                 {checkpoint.techStack && checkpoint.techStack.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-3">
                         {checkpoint.techStack.slice(0, 4).map((tech) => (

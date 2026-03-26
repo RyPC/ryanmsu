@@ -38,6 +38,7 @@ export interface Checkpoint {
    */
   branchLength?: number
   url?: string
+  links?: Array<{ label: string; href: string }>
   dates?: string
   /**
    * When true, this checkpoint is a landmark — rendered directly on the trail
@@ -64,11 +65,15 @@ export const experiences: Checkpoint[] = [
     type: 'checkpoint',
     variant: 'education',
     description:
-      "I build software the way a good trail is built — deliberate lines, solid footing, and care for the people walking it. I’m a CS student at UC Irvine who loves shipping scrappy tools that earn trust through tiny UX details. Outside of engineering: skiing, climbing, and long hikes with friends.",
+      "Incoming SWE @ BlackRock. CS grad from UC Irvine, GPA 3.9. Built distributed search infrastructure at Veeva Systems, shipped apps saving nonprofits 200+ hours a year, and co-founded a React Native startup.",
     locationOnTrail: 0.08,
     icon: 'trailhead',
     sideTrail: false,
     isLandmark: true,
+    links: [
+      { label: 'GitHub', href: 'https://github.com/RyPC' },
+      { label: 'LinkedIn', href: 'https://linkedin.com/in/ryan-m-su' },
+    ],
   },
   {
     id: 'first-projects',
@@ -95,7 +100,7 @@ export const experiences: Checkpoint[] = [
     type: 'checkpoint',
     variant: 'education',
     description:
-      'Computer Science student, GPA 3.9. Graduating March 2026. Building foundations in systems, algorithms, and software engineering.',
+      'Computer Science, GPA 3.9. Graduated March 2026. B.S. from UC Irvine.',
     locationOnTrail: 0.25,
     icon: 'peak',
     sideTrail: false,
