@@ -137,15 +137,23 @@ export function useMarkerAnimation({
   // Start with the marker lower on screen (bottom 25%), then blend to the
   // normal mid-screen lock once it reaches the middle.
   const startOffsetY = VIEW_WINDOW_HEIGHT * 0.75
-  const midOffsetY = VIEW_WINDOW_HEIGHT * 0.5
+  const heroOffsetY = VIEW_WINDOW_HEIGHT * 0.5
   const rampDistance = VIEW_WINDOW_HEIGHT * 0.25
   const rampT = rampDistance > 0 ? markerPoint.y / rampDistance : 1
-  const targetOffsetY = lerp(startOffsetY, midOffsetY, rampT)
+  const baseOffsetY = lerp(startOffsetY, heroOffsetY, rampT)
+
+  // As the marker approaches the summit, lift it toward the top of the viewport
+  // so the summit section scrolls into view beneath it.
+  const endOffsetY = VIEW_WINDOW_HEIGHT * 0.22
+  const summitRampStart = 2300
+  const summitRampLength = TRAIL_PATH_MAX_Y - summitRampStart
+  const summitT = clamp((markerPoint.y - summitRampStart) / summitRampLength, 0, 1)
+  const targetOffsetY = lerp(baseOffsetY, endOffsetY, summitT)
 
   // Allow the camera to start above the trail so the marker can sit in the
   // bottom quarter immediately (this requires viewY < -HALF_VIEW_WINDOW_HEIGHT).
   const minViewY = TRAIL_PATH_MIN_Y - startOffsetY
-  const maxViewY = TRAIL_PATH_MAX_Y - midOffsetY
+  const maxViewY = TRAIL_PATH_MAX_Y - endOffsetY
   const viewY = clamp(markerPoint.y - targetOffsetY, minViewY, maxViewY)
 
   useEffect(() => {

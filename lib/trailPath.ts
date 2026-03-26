@@ -86,16 +86,12 @@ export function getTrailMetricsFromExperiences(
  */
 export function scrollProgressToMarkerProgress(
   scrollProgress: number,
-  heroHeight: number,
-  trailProgressHeight: number,
+  _heroHeight: number,
+  _trailProgressHeight: number,
 ): number {
-  const totalScrollHeight = heroHeight + trailProgressHeight
-  if (totalScrollHeight <= 0) return 0
-  // Cards are positioned in a fixed 0–TRAIL_CONTENT_HEIGHT coordinate space.
-  // Convert scroll progress into an equivalent trail-space fraction so the
-  // marker aligns with checkpoint cards and landmark dots.
-  const scrollTopPx = clamp01(scrollProgress) * totalScrollHeight
-  return clamp01(scrollTopPx / TRAIL_CONTENT_HEIGHT)
+  // progressHeight === TRAIL_CONTENT_HEIGHT and maxScrollTop === heroHeight + TRAIL_CONTENT_HEIGHT,
+  // so scroll progress and marker trail progress are identical linear mappings.
+  return clamp01(scrollProgress)
 }
 
 /**
@@ -108,13 +104,10 @@ export function scrollProgressToMarkerProgress(
  */
 export function markerProgressToScrollProgress(
   markerProgress: number,
-  heroHeight: number,
-  trailProgressHeight: number,
+  _heroHeight: number,
+  _trailProgressHeight: number,
 ): number {
-  const totalScrollHeight = heroHeight + trailProgressHeight
-  if (totalScrollHeight <= 0) return 0
-  const markerTopPx = clamp01(markerProgress) * TRAIL_CONTENT_HEIGHT
-  return clamp01(markerTopPx / totalScrollHeight)
+  return clamp01(markerProgress)
 }
 
 export function locationToScrollProgress(

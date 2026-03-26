@@ -1,11 +1,11 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback, useMemo } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { TrailLayer } from "@/components/trail/TrailLayer";
 import { TopographyBackground } from "@/components/trail/TopographyBackground";
 import { TrailheadHero } from "@/components/trail/TrailheadHero";
-import { Checkpoint } from "@/components/trail/Checkpoint";
+import { SummitSection } from "@/components/trail/SummitSection";
 import { ProgressIndicator } from "@/components/trail/ProgressIndicator";
 import { SideTrailView } from "@/components/side-trail/SideTrailView";
 import { SectionNav, SECTION_NAV_WIDTH } from "@/components/nav/SectionNav";
@@ -16,15 +16,9 @@ import {
     type Checkpoint as CheckpointType,
 } from "@/data/experiences";
 import {
-    getTrailMetricsFromExperiences,
     locationToScrollProgress,
-    scrollProgressToMarkerProgress,
     TRAIL_CONTENT_HEIGHT,
 } from "@/lib/trailPath";
-import {
-    LANDMARK_OPEN_THRESHOLD,
-    LANDMARK_VIEWPORT_FRACTION,
-} from "@/lib/constants";
 
 const CONTENT_NAV_GAP = 24;
 const TRAIL_ZONE_WIDTH_PCT = 28;
@@ -80,17 +74,15 @@ export function TrailViewTransition() {
     );
     const [trailContentVisible, setTrailContentVisible] = useState(true);
     const hasVisitedSideTrail = useRef(false);
-    const trailMetrics = useMemo(
-        () => getTrailMetricsFromExperiences(experiences),
-        [],
-    );
-    const { progressHeight } = trailMetrics;
+
+    const progressHeight = TRAIL_CONTENT_HEIGHT;
     const trailScrollHeightPx = heroHeight + progressHeight;
 
     const showTrailContent = !activeSideTrailId || trailContentVisible;
-    const { progress, heroReveal } = useTrailProgress(scrollContainerRef, {
+    const { progress, heroReveal, summitReveal } = useTrailProgress(scrollContainerRef, {
         heroHeight,
         trailHeight: progressHeight,
+        summitHeight: heroHeight,
         containerReady: showTrailContent,
     });
 
@@ -140,7 +132,10 @@ export function TrailViewTransition() {
     const isSideTrailMode = !!activeSideTrailId;
     // Blow opposite to clicked side: right-click → blow left, left-click → blow right
     const blowDirection = clickedSide === "right" ? "left" : "right";
-    const checkpointItems = experiences.filter((c) => c.id !== "trailhead");
+    const checkpointItems = experiences.filter(
+        (c) => c.id !== "trailhead" && c.type !== "summit",
+    );
+    const summitCheckpoint = experiences.find((c) => c.type === "summit")!;
     const sideTrailCheckpoints = checkpointItems.filter(
         (c) => c.sideTrail && c.sideTrailId,
     );
@@ -162,14 +157,6 @@ export function TrailViewTransition() {
         }
         prevActiveSideTrailIdRef.current = activeSideTrailId;
     }, [activeSideTrailId]);
-
-    // Marker trail-space progress that powers marker movement and landmark
-    // behavior; derived from scroll-based progress using the shared helper.
-    const markerProgress = scrollProgressToMarkerProgress(
-        progress,
-        heroHeight,
-        progressHeight,
-    );
 
     const getCheckpointCardSide = useCallback(
         (checkpointId: string) => {
@@ -303,76 +290,19 @@ export function TrailViewTransition() {
                         <motion.div
                             className="relative w-full"
                             style={{
-                                minHeight: `${trailScrollHeightPx}px`,
+                                minHeight: `${TRAIL_CONTENT_HEIGHT}px`,
                                 paddingLeft:
                                     SECTION_NAV_WIDTH + CONTENT_NAV_GAP,
                             }}
                             variants={blowOffTrailArea}
                         >
                             <ProgressIndicator progress={progress} />
-                            {checkpointItems
-                                .filter((c) => c.isLandmark)
-                                .map((checkpoint, index) => {
-                                    const isLandmark =
-                                        checkpoint.isLandmark ?? false;
-                                    const totalScrollHeightPx =
-                                        heroHeight + progressHeight;
-                                    const scrollTopPx =
-                                        progress * totalScrollHeightPx;
-                                    const cardCenterTopPx =
-                                        checkpoint.locationOnTrail *
-                                            TRAIL_CONTENT_HEIGHT +
-                                        heroHeight / 2;
-                                    const cardCenterInViewportPx =
-                                        cardCenterTopPx - scrollTopPx;
-
-                                    const bandTopPx =
-                                        (0.5 - LANDMARK_VIEWPORT_FRACTION / 2) *
-                                        heroHeight;
-                                    const bandBottomPx =
-                                        (0.5 + LANDMARK_VIEWPORT_FRACTION / 2) *
-                                        heroHeight;
-
-                                    const isInViewportBand =
-                                        cardCenterInViewportPx >= bandTopPx &&
-                                        cardCenterInViewportPx <= bandBottomPx;
-
-                                    // Landmark visibility is gated by both:
-                                    // - trail-space proximity (marker vs landmark),
-                                    // - card being within the middle viewport band.
-                                    const isNearLandmark = isLandmark
-                                        ? Math.abs(
-                                              markerProgress -
-                                                  checkpoint.locationOnTrail,
-                                          ) < LANDMARK_OPEN_THRESHOLD
-                                        : false;
-                                    // For visibility, trail-space proximity is the primary gate.
-                                    // The viewport band is used to keep the card roughly centered
-                                    // but should not completely suppress visibility.
-                                    const isLandmarkVisible = isNearLandmark;
-
-                                    return (
-                                        <Checkpoint
-                                            key={checkpoint.id}
-                                            checkpoint={checkpoint}
-                                            index={index}
-                                            heroHeight={heroHeight}
-                                            isInViewport={
-                                                isInViewportBand
-                                            }
-                                            isVisible={
-                                                isLandmarkVisible
-                                            }
-                                            onOpenSideTrail={
-                                                handleOpenSideTrail
-                                            }
-                                            exitVariants={blowOffItem(
-                                                index + 2,
-                                                blowDirection,
-                                            )}
-                                        />
-                                    );
-                                })}
+                        </motion.div>
+                        <motion.div variants={blowOffItem(2, blowDirection)}>
+                            <SummitSection
+                                summit={summitCheckpoint}
+                                summitReveal={summitReveal}
+                            />
                         </motion.div>
                     </div>
                 </motion.div>
