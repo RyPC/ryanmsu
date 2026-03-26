@@ -8,23 +8,47 @@ interface LandmarkInfographicProps {
     isVisible: boolean;
 }
 
+interface LandmarkTile {
+    label: string;
+    value: string;
+    color: "orange" | "slate" | "violet" | "emerald" | "sky" | "rose";
+}
+
+const tileColors: Record<LandmarkTile["color"], { bg: string; label: string; value: string }> = {
+    orange:  { bg: "bg-orange-50",  label: "text-orange-900",  value: "text-orange-800/80" },
+    slate:   { bg: "bg-slate-50",   label: "text-slate-900",   value: "text-slate-700/80"  },
+    violet:  { bg: "bg-violet-50",  label: "text-violet-900",  value: "text-violet-800/80" },
+    emerald: { bg: "bg-emerald-50", label: "text-emerald-900", value: "text-emerald-800/80"},
+    sky:     { bg: "bg-sky-50",     label: "text-sky-900",     value: "text-sky-800/80"    },
+    rose:    { bg: "bg-rose-50",    label: "text-rose-900",    value: "text-rose-800/80"   },
+};
+
+const LANDMARK_TILES: Record<string, LandmarkTile[]> = {
+    "about-me": [
+        { label: "Next Role",     value: "Incoming SWE @ BlackRock · Starting 2026",                      color: "sky"     },
+        { label: "Experience",    value: "Veeva Systems · GoWith (co-founder) · 2 research roles",        color: "slate"   },
+        { label: "Stack",         value: "Java · React · Python · TypeScript · AWS · PostgreSQL",         color: "violet"  },
+        { label: "Outside Code",  value: "Skiing, climbing, long hikes — best ideas come on the way down", color: "emerald" },
+    ],
+    "uc-irvine": [
+        { label: "Degree",      value: "B.S. Computer Science",                                    color: "orange"  },
+        { label: "GPA",         value: "3.92 / 4.0",                                                color: "emerald" },
+        { label: "Graduated",   value: "March 2026",                                               color: "slate"   },
+        { label: "Involvement", value: "IVP of Commit the Change · Research Assistant in Anthropology", color: "violet"  },
+    ],
+};
+
 const infographicVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
         opacity: 1,
         y: 0,
-        transition: {
-            duration: 0.4,
-            ease: "easeOut",
-        },
+        transition: { duration: 0.4, ease: "easeOut" },
     },
     exit: {
         opacity: 0,
         y: 10,
-        transition: {
-            duration: 0.25,
-            ease: "easeInOut",
-        },
+        transition: { duration: 0.25, ease: "easeInOut" },
     },
 };
 
@@ -36,14 +60,12 @@ export function LandmarkInfographic({
         "pointer-events-none fixed z-[60] flex w-[576px] max-w-[calc(100vw-3rem)] flex-col gap-6 rounded-2xl border border-orange-200/80 bg-white/95 p-8 shadow-2xl shadow-orange-100/80 backdrop-blur-md";
 
     const getLayoutClasses = (id: string | undefined) => {
-        if (id === "about-me") {
-            return "right-6 top-24 md:right-10 md:top-28 lg:right-16 lg:top-32";
-        }
-        if (id === "uc-irvine") {
-            return "left-6 bottom-24 md:left-10 md:bottom-28 lg:left-16 lg:bottom-32";
-        }
+        if (id === "about-me") return "right-6 top-24 md:right-10 md:top-28 lg:right-16 lg:top-32";
+        if (id === "uc-irvine") return "left-6 bottom-24 md:left-10 md:bottom-28 lg:left-16 lg:bottom-32";
         return "right-6 top-24 md:right-10 md:top-28 lg:right-16 lg:top-32";
     };
+
+    const tiles = checkpoint ? (LANDMARK_TILES[checkpoint.id] ?? []) : [];
 
     return (
         <AnimatePresence>
@@ -57,9 +79,7 @@ export function LandmarkInfographic({
                 >
                     <div className="flex items-center gap-4">
                         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-orange-100 text-orange-700">
-                            <span className="text-2xl" aria-hidden="true">
-                                ◆
-                            </span>
+                            <span className="text-2xl" aria-hidden="true">◆</span>
                         </div>
                         <div className="min-w-0">
                             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-500">
@@ -70,9 +90,7 @@ export function LandmarkInfographic({
                             </h3>
                         </div>
                     </div>
-                    <p className="text-base leading-relaxed text-gray-700">
-                        {checkpoint.description}
-                    </p>
+
                     {checkpoint.links && checkpoint.links.length > 0 && (
                         <div className="flex gap-2">
                             {checkpoint.links.map((link) => (
@@ -98,43 +116,26 @@ export function LandmarkInfographic({
                             ))}
                         </div>
                     )}
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="rounded-xl bg-orange-50 px-4 py-3">
-                            <p className="font-medium text-orange-900">
-                                Background
-                            </p>
-                            <p className="mt-1 text-xs text-orange-800/80">
-                                B.S. Computer Science · UC Irvine · GPA 3.9 · Class of 2026
-                            </p>
+
+                    {tiles.length > 0 && (
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                            {tiles.map((tile, i) => {
+                                const c = tileColors[tile.color];
+                                const isOddLast = tiles.length % 2 !== 0 && i === tiles.length - 1;
+                                return (
+                                    <div
+                                        key={tile.label}
+                                        className={`rounded-xl px-4 py-3 ${c.bg} ${isOddLast ? "col-span-2" : ""}`}
+                                    >
+                                        <p className={`font-medium ${c.label}`}>{tile.label}</p>
+                                        <p className={`mt-1 text-xs ${c.value}`}>{tile.value}</p>
+                                    </div>
+                                );
+                            })}
                         </div>
-                        <div className="rounded-xl bg-slate-50 px-4 py-3">
-                            <p className="font-medium text-slate-900">
-                                Experience
-                            </p>
-                            <p className="mt-1 text-xs text-slate-700/80">
-                                Veeva Systems · GoWith (co-founder) · 2 research roles
-                            </p>
-                        </div>
-                        <div className="rounded-xl bg-violet-50 px-4 py-3">
-                            <p className="font-medium text-violet-900">
-                                Stack
-                            </p>
-                            <p className="mt-1 text-xs text-violet-800/80">
-                                Java · React · Python · TypeScript · AWS · PostgreSQL
-                            </p>
-                        </div>
-                        <div className="rounded-xl bg-emerald-50 px-4 py-3">
-                            <p className="font-medium text-emerald-900">
-                                Outside Code
-                            </p>
-                            <p className="mt-1 text-xs text-emerald-800/80">
-                                Skiing, climbing, long hikes — best ideas come on the way down
-                            </p>
-                        </div>
-                    </div>
+                    )}
                 </motion.div>
             )}
         </AnimatePresence>
     );
 }
-

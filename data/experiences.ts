@@ -120,7 +120,7 @@ const checkpointData: CheckpointDraft[] = [
     type: 'checkpoint',
     variant: 'education',
     description:
-      'Computer Science, GPA 3.9. Graduated March 2026. B.S. from UC Irvine.',
+      'Computer Science, GPA 3.92. Graduated March 2026. B.S. from UC Irvine.',
     icon: 'peak',
     sideTrail: false,
     isLandmark: true,
