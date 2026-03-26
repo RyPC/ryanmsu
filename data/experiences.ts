@@ -47,7 +47,34 @@ export interface Checkpoint {
   isLandmark?: boolean
 }
 
-export const experiences: Checkpoint[] = [
+// --- Location assignment ---
+// Trailhead and summit are pinned. All entries in between are distributed
+// evenly between TRAIL_START and TRAIL_END — add or remove entries freely.
+const TRAILHEAD_LOCATION = 0.02
+const SUMMIT_LOCATION = 0.95
+const TRAIL_START = 0.25
+const TRAIL_END = 0.90
+
+type CheckpointDraft = Omit<Checkpoint, 'locationOnTrail'>
+
+function assignLocations(drafts: CheckpointDraft[]): Checkpoint[] {
+  const middle = drafts.filter(d => d.type !== 'trailhead' && d.type !== 'summit')
+  return drafts.map(d => {
+    if (d.type === 'trailhead') return { ...d, locationOnTrail: TRAILHEAD_LOCATION }
+    if (d.type === 'summit') return { ...d, locationOnTrail: SUMMIT_LOCATION }
+    const idx = middle.indexOf(d)
+    const location =
+      middle.length === 1
+        ? (TRAIL_START + TRAIL_END) / 2
+        : TRAIL_START + (idx / (middle.length - 1)) * (TRAIL_END - TRAIL_START)
+    return { ...d, locationOnTrail: location }
+  })
+}
+
+// --- Data ---
+// Do not add locationOnTrail here — it is computed automatically from array order.
+
+const checkpointData: CheckpointDraft[] = [
   {
     id: 'trailhead',
     title: 'Ryan Su',
@@ -55,7 +82,6 @@ export const experiences: Checkpoint[] = [
     variant: 'experience',
     description:
       "Computer Science at UC Irvine '26. Building software for impact — scalable systems, tech for social good, and the occasional ski run.",
-    locationOnTrail: 0.02,
     icon: 'trailhead',
     sideTrail: false,
   },
@@ -66,7 +92,6 @@ export const experiences: Checkpoint[] = [
     variant: 'education',
     description:
       "Incoming SWE @ BlackRock. CS grad from UC Irvine, GPA 3.9. Built distributed search infrastructure at Veeva Systems, shipped apps saving nonprofits 200+ hours a year, and co-founded a React Native startup.",
-    locationOnTrail: 0.08,
     icon: 'trailhead',
     sideTrail: false,
     isLandmark: true,
@@ -82,16 +107,11 @@ export const experiences: Checkpoint[] = [
     variant: 'project',
     description:
       '191 For 191 — MERN stack database of 70+ UCI capstone projects. Heart Sensor Device — ESP32 IoT for remote health monitoring.',
-    locationOnTrail: 0.15,
     icon: 'campsite',
     techStack: ['MongoDB', 'Express', 'React', 'Node.js', 'C++', 'ESP32', 'AWS'],
     sideTrail: true,
     sideTrailId: 'first-projects',
-    sideTrailEndpoint: {
-      side: 'left',
-      xOffset: 632,
-      yOffset: 95,
-    },
+    sideTrailEndpoint: { side: 'left' },
     branchLength: 0.8,
   },
   {
@@ -101,7 +121,6 @@ export const experiences: Checkpoint[] = [
     variant: 'education',
     description:
       'Computer Science, GPA 3.9. Graduated March 2026. B.S. from UC Irvine.',
-    locationOnTrail: 0.25,
     icon: 'peak',
     sideTrail: false,
     isLandmark: true,
@@ -113,16 +132,11 @@ export const experiences: Checkpoint[] = [
     variant: 'experience',
     description:
       'Software Developer Intern. Built LLM-driven chatbot with OpenAI APIs, data privacy via NLP detection, AWS RDS infrastructure.',
-    locationOnTrail: 0.35,
     icon: 'lab',
     techStack: ['Python', 'OpenAI', 'NLP', 'AWS RDS', 'PostgreSQL'],
     sideTrail: true,
     sideTrailId: 'biorobotics',
-    sideTrailEndpoint: {
-      side: 'left',
-      xOffset: 592,
-      yOffset: 100,
-    },
+    sideTrailEndpoint: { side: 'left' },
     branchLength: 1.0,
     dates: 'June 2024 – Oct. 2024',
   },
@@ -133,16 +147,11 @@ export const experiences: Checkpoint[] = [
     variant: 'experience',
     description:
       'Internal Vice President. React + Node.js apps for nonprofits, 200+ hours saved/year. Team of 14, Scrum, AWS deployment.',
-    locationOnTrail: 0.45,
     icon: 'computer',
     techStack: ['React', 'Node.js', 'AWS EC2', 'S3', 'PostgreSQL'],
     sideTrail: true,
     sideTrailId: 'commit-the-change',
-    sideTrailEndpoint: {
-      side: 'right',
-      xOffset: 672,
-      yOffset: 88,
-    },
+    sideTrailEndpoint: { side: 'right' },
     branchLength: 1.3,
     url: 'https://ctc-uci.com',
     dates: 'Oct. 2024 – Present',
@@ -154,16 +163,11 @@ export const experiences: Checkpoint[] = [
     variant: 'experience',
     description:
       'Software Engineer Intern. Search services with Java/Spring Boot. React dashboard for 6,000+ EC2 nodes. Automated maintenance scheduling.',
-    locationOnTrail: 0.6,
     icon: 'computer',
     techStack: ['Java', 'Spring Boot', 'React', 'JavaScript'],
     sideTrail: true,
     sideTrailId: 'veeva',
-    sideTrailEndpoint: {
-      side: 'left',
-      xOffset: 648,
-      yOffset: 105,
-    },
+    sideTrailEndpoint: { side: 'left' },
     branchLength: 1.15,
     url: 'https://www.veeva.com',
     dates: 'June 2025 – Sept. 2025',
@@ -175,16 +179,11 @@ export const experiences: Checkpoint[] = [
     variant: 'experience',
     description:
       'Co-founder / Lead Engineer. React Native app, Supabase/PostgreSQL, RLS. OAuth, real-time messaging, Sentry, API rate limiting.',
-    locationOnTrail: 0.75,
     icon: 'startup',
     techStack: ['React Native', 'TypeScript', 'Supabase', 'PostgreSQL'],
     sideTrail: true,
     sideTrailId: 'gowith',
-    sideTrailEndpoint: {
-      side: 'right',
-      xOffset: 700,
-      yOffset: 92,
-    },
+    sideTrailEndpoint: { side: 'right' },
     branchLength: 1.5,
     url: 'https://gowithapartner.com',
     dates: 'June 2025 – Present',
@@ -196,16 +195,11 @@ export const experiences: Checkpoint[] = [
     variant: 'experience',
     description:
       'Research Assistant. GPT-4o labeling automation, 80% time reduction. Data pipelines, MongoDB, React visualization app.',
-    locationOnTrail: 0.85,
     icon: 'lab',
     techStack: ['OpenAI GPT-4o', 'MongoDB', 'React', 'Node.js'],
     sideTrail: true,
     sideTrailId: 'anthropology-research',
-    sideTrailEndpoint: {
-      side: 'left',
-      xOffset: 608,
-      yOffset: 98,
-    },
+    sideTrailEndpoint: { side: 'left' },
     branchLength: 0.9,
     dates: 'Feb. 2025 – Present',
   },
@@ -216,8 +210,9 @@ export const experiences: Checkpoint[] = [
     variant: 'experience',
     description:
       'Building impactful software at scale. Full-stack systems, clean architecture, and tech that makes a difference.',
-    locationOnTrail: 0.95,
     icon: 'peak',
     sideTrail: false,
   },
 ]
+
+export const experiences: Checkpoint[] = assignLocations(checkpointData)
