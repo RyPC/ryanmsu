@@ -131,7 +131,7 @@ const checkpointData: CheckpointDraft[] = [
     type: 'checkpoint',
     variant: 'experience',
     description:
-      'Software Developer Intern. Built LLM-driven chatbot with OpenAI APIs, data privacy via NLP detection, AWS RDS infrastructure.',
+      'Software Developer Intern. LLM chatbot delivering medically relevant guidance via OpenAI APIs. NLP content detection + AES encryption. Secure AWS RDS/PostgreSQL infrastructure.',
     icon: 'lab',
     techStack: ['Python', 'OpenAI', 'NLP', 'AWS RDS', 'PostgreSQL'],
     sideTrail: true,
@@ -146,7 +146,7 @@ const checkpointData: CheckpointDraft[] = [
     type: 'checkpoint',
     variant: 'experience',
     description:
-      'Internal Vice President. React + Node.js apps for nonprofits, 200+ hours saved/year. Team of 14, Scrum, AWS deployment.',
+      'Internal Vice President & Full-stack Developer. React + Node.js apps saving nonprofits 200+ hours/year. AWS S3 & EC2, PostgreSQL, team of 14 in Scrum sprints.',
     icon: 'computer',
     techStack: ['React', 'Node.js', 'AWS EC2', 'S3', 'PostgreSQL'],
     sideTrail: true,
@@ -162,7 +162,7 @@ const checkpointData: CheckpointDraft[] = [
     type: 'checkpoint',
     variant: 'experience',
     description:
-      'Software Engineer Intern. Search services with Java/Spring Boot. React dashboard for 6,000+ EC2 nodes. Automated maintenance scheduling.',
+      'SWE Intern (Search Infrastructure). Indexed business-critical docs for 1,400+ pharmaceuticals. React dashboard surfacing 6,000+ EC2 nodes 75% quicker. Reduced infra workload 90% via automated scheduling.',
     icon: 'computer',
     techStack: ['Java', 'Spring Boot', 'React', 'JavaScript'],
     sideTrail: true,
@@ -178,7 +178,7 @@ const checkpointData: CheckpointDraft[] = [
     type: 'checkpoint',
     variant: 'experience',
     description:
-      'Co-founder / Lead Engineer. React Native app, Supabase/PostgreSQL, RLS. OAuth, real-time messaging, Sentry, API rate limiting.',
+      'Co-founder / Lead Engineer. React Native + TypeScript, Supabase/PostgreSQL with RLS across 15+ tables. OAuth, real-time messaging, intelligent caching, Sentry monitoring.',
     icon: 'startup',
     techStack: ['React Native', 'TypeScript', 'Supabase', 'PostgreSQL'],
     sideTrail: true,
@@ -194,7 +194,7 @@ const checkpointData: CheckpointDraft[] = [
     type: 'checkpoint',
     variant: 'experience',
     description:
-      'Research Assistant. GPT-4o labeling automation, 80% time reduction. Data pipelines, MongoDB, React visualization app.',
+      'Research Assistant. GPT-4o automation cut labeling time of 1,000+ images by 80%. JSONL/CSV pipelines into MongoDB. React + Node.js/Express app to visualize trends.',
     icon: 'lab',
     techStack: ['OpenAI GPT-4o', 'MongoDB', 'React', 'Node.js'],
     sideTrail: true,
@@ -202,6 +202,36 @@ const checkpointData: CheckpointDraft[] = [
     sideTrailEndpoint: { side: 'left' },
     branchLength: 0.9,
     dates: 'Feb. 2025 – Present',
+  },
+  {
+    id: 'paper-tracker',
+    title: 'Neuro-Symbolic Paper Tracker',
+    type: 'checkpoint',
+    variant: 'project',
+    description:
+      'React/Python app for researchers to track relationships between papers and topics. Claude LLM extracts topics from PDFs, building an interactive knowledge graph with semantic search.',
+    icon: 'lab',
+    techStack: ['Python', 'FastAPI', 'TypeScript', 'React', 'Claude'],
+    sideTrail: true,
+    sideTrailId: 'paper-tracker',
+    sideTrailEndpoint: { side: 'right' },
+    branchLength: 0.9,
+    dates: 'Oct. 2025',
+  },
+  {
+    id: 'project-nova',
+    title: 'Project Nova',
+    type: 'checkpoint',
+    variant: 'project',
+    description:
+      '6+ AI agent pipeline to autonomously develop and deploy full-stack projects. Distributed async system with Celery + Redis for multi-agent workflows across the startup lifecycle.',
+    icon: 'startup',
+    techStack: ['Python', 'FastAPI', 'React', 'Celery', 'Redis', 'Anthropic API'],
+    sideTrail: true,
+    sideTrailId: 'project-nova',
+    sideTrailEndpoint: { side: 'left' },
+    branchLength: 1.2,
+    dates: 'March 2026 – Present',
   },
   {
     id: 'summit',

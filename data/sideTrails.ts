@@ -67,7 +67,7 @@ export const sideTrails: Record<string, SideTrailContent> = {
   'commit-the-change': {
     id: 'commit-the-change',
     title: 'Commit the Change',
-    description: 'Internal Vice President — Tech for social good.',
+    description: 'Internal Vice President & Full-stack Developer — Tech for social good.',
     techStack: ['React', 'Node.js', 'AWS EC2', 'S3', 'PostgreSQL'],
     url: 'https://ctc-uci.com',
     theme: 'campus',
@@ -127,6 +127,50 @@ export const sideTrails: Record<string, SideTrailContent> = {
         content: [
           'Implemented OAuth (Google & Apple), real-time messaging',
           'Intelligent caching to reduce external API costs',
+        ],
+      },
+    ],
+  },
+  'paper-tracker': {
+    id: 'paper-tracker',
+    title: 'Neuro-Symbolic Paper Tracker',
+    description: 'React/Python research tool for tracking relationships between academic papers and topics.',
+    techStack: ['Python', 'FastAPI', 'TypeScript', 'React', 'Claude'],
+    theme: 'academic',
+    sections: [
+      {
+        type: 'text',
+        content:
+          'Developed a React/Python app enabling researchers to track and visualize relationships between papers and topics. Integrated Claude LLM to extract topics from PDFs, dynamically constructing an interactive knowledge graph.',
+      },
+      {
+        type: 'list',
+        content: [
+          'Enabled semantic search and contextual topic querying',
+          'Improved research organization and discovery efficiency',
+          'Built with FastAPI backend and TypeScript/React frontend',
+        ],
+      },
+    ],
+  },
+  'project-nova': {
+    id: 'project-nova',
+    title: 'Project Nova',
+    description: 'Autonomous AI agent pipeline for end-to-end project development and deployment.',
+    techStack: ['Python', 'FastAPI', 'React', 'Celery', 'Redis', 'Anthropic API', 'Vercel', 'GitHub API'],
+    theme: 'startup',
+    sections: [
+      {
+        type: 'text',
+        content:
+          'Built a 6+ AI agent pipeline to autonomously develop and deploy end-to-end projects via Vercel & GitHub APIs. Architected a distributed async system with Celery + Redis for multi-agent workflows across the startup lifecycle.',
+      },
+      {
+        type: 'list',
+        content: [
+          'Iterative code-generation agent produces, previews, and deploys full React/TypeScript apps',
+          'Multi-agent coordination across planning, coding, testing, and deployment stages',
+          'Distributed task queue handles concurrent agent workloads with Celery + Redis',
         ],
       },
     ],
